@@ -3,27 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SENTINEL V10 - VOLUME ANALYST</title>
+    <title>SENTINEL V10 - ELITE SNIPER</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
         body { background: #000; color: #fff; font-family: 'Inter', sans-serif; overflow-x: hidden; }
         .font-header { font-family: 'Orbitron', sans-serif; }
-        .ultimate-card { border: 2px solid #1a1a1a; background: linear-gradient(165deg, #051a10, #000); box-shadow: 0 0 30px rgba(20, 241, 149, 0.1); border-radius: 35px; transition: all 0.3s ease; }
+        .ultimate-card { border: 2px solid #1a1a1a; background: linear-gradient(165deg, #051a10, #000); box-shadow: 0 0 30px rgba(20, 241, 149, 0.1); border-radius: 35px; transition: all 0.3s ease; position: relative; }
         .ultimate-card:hover { border-color: #14f195; transform: translateY(-5px); }
         .vault-card { border: 2px dashed #ffd700; background: rgba(255, 215, 0, 0.02); border-radius: 35px; margin-bottom: 20px; position: relative; }
         .shimmer { background: linear-gradient(90deg, transparent, rgba(20,241,149,0.05), transparent); background-size: 200% 100%; animation: shimmer 3s infinite; }
         @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
-        .status-safe { color: #14f195 !important; font-weight: bold; }
-        .status-danger { color: #ff4b4b !important; font-weight: bold; }
         .timer-bar { height: 4px; background: #14f195; transition: width 1s linear; width: 100%; }
         .badge-momentum { background: linear-gradient(90deg, #14f195, #00ff88); color: #000; padding: 2px 10px; border-radius: 10px; font-size: 9px; font-weight: 800; animation: pulse 1s infinite; }
+        .buy-signal { background: #14f195; color: #000; font-weight: 900; padding: 4px 12px; border-radius: 12px; font-size: 10px; animation: bounce 0.5s infinite alternate; box-shadow: 0 0 20px rgba(20, 241, 149, 0.5); }
+        .ratio-warning { color: #ffd700; font-size: 8px; font-weight: bold; text-transform: uppercase; margin-top: 4px; }
+        @keyframes bounce { from { transform: scale(1); } to { transform: scale(1.1); } }
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
     </style>
 </head>
 <body class="p-4">
     <div class="text-center mb-6 pt-4 relative shimmer rounded-3xl p-4 border border-white/5">
-        <h1 class="font-header text-3xl tracking-tighter text-[#14f195]">SENTINEL <span class="text-white text-xl">V10 PRO</span></h1>
+        <h1 class="font-header text-3xl tracking-tighter text-[#14f195]">SENTINEL <span class="text-white text-xl">V10 ELITE</span></h1>
         <div class="flex justify-center items-center gap-2 text-[10px] mt-2 opacity-60 uppercase tracking-[0.2em]">
             <div class="w-2 h-2 rounded-full bg-[#14f195] animate-pulse"></div>
             RADAR ACTIVE: <span id="clock">00:00:00</span>
@@ -31,7 +32,7 @@
         <div class="mt-4 w-full bg-white/10 rounded-full overflow-hidden">
             <div id="timerBar" class="timer-bar"></div>
         </div>
-        <div class="text-[9px] mt-1 text-[#14f195]">VOLUME ANALYST ACTIVE | REFRESH: <span id="seconds">15</span>s</div>
+        <div class="text-[9px] mt-1 text-[#14f195]">ELITE FILTERS: ON | REFRESH: <span id="seconds">15</span>s</div>
     </div>
 
     <div id="scanner-container">
@@ -39,7 +40,6 @@
             <div class="text-center text-[#ffd700] text-[10px] font-header mb-2 tracking-[0.3em] uppercase">⚠️ Locked Signal (Vault)</div>
             <div id="vault-list"></div>
         </div>
-
         <hr class="border-white/5 my-6">
         <div id="token-list" class="space-y-6"></div>
     </div>
@@ -49,13 +49,6 @@
         const REFRESH_RATE = 15;
         let timeLeft = REFRESH_RATE;
         let vault = JSON.parse(localStorage.getItem('sentinel_vault') || '{}');
-
-        function getStatusClass(value, type) {
-            if (type === 'top10') return value <= 20 ? 'status-safe' : 'status-danger';
-            if (type === 'insider') return value <= 5 ? 'status-safe' : 'status-danger';
-            if (type === 'liq') return value >= 10000 ? 'status-safe' : 'status-danger';
-            return '';
-        }
 
         function getTimeAgo(timestamp) {
             const seconds = Math.floor((new Date() - timestamp) / 1000);
@@ -73,19 +66,15 @@
                 const pairsResponse = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${solanaProfiles.map(p => p.tokenAddress).join(',')}`);
                 const pairsData = await pairsResponse.json();
                 
-                // FILTER KETAT & MOMENTUM TRACKER
+                // FILTER ELITE: Minimum Liquidity & Volume lebih ketat
                 const validPairs = (pairsData.pairs || [])
                     .filter(p => 
-                        p.liquidity?.usd > 8000 && 
-                        p.volume?.h24 > 15000 &&
-                        p.priceChange?.h24 > -15 // Buang koin sampah yang dump parah
+                        p.liquidity?.usd > 12000 && // Naikkan batas minimal likuiditas
+                        p.volume?.h24 > 25000 &&   // Naikkan batas minimal volume
+                        p.priceChange?.h24 > -10 && // Buang koin yang dump > 10%
+                        p.priceChange?.m5 > -5      // Buang koin yang dump mendadak dalam 5 menit
                     )
-                    .sort((a, b) => {
-                        // Prioritaskan koin yang Volume 5 Menitnya paling meledak (Momentum)
-                        const volA = a.volume?.m5 || 0;
-                        const volB = b.volume?.m5 || 0;
-                        return volB - volA;
-                    })
+                    .sort((a, b) => (b.volume?.m5 || 0) - (a.volume?.m5 || 0))
                     .slice(0, 10);
 
                 render(solanaProfiles, validPairs);
@@ -104,75 +93,69 @@
                 const vol24h = pair.volume?.h24 || 0;
                 const change = pair.priceChange?.h24 || 0;
                 const createdAt = pair.pairCreatedAt || Date.now();
-                
-                // DATA TAMBAHAN: Buys, Sells, Buy Vol, Sell Vol
                 const txns = pair.txns?.h24 || { buys: 0, sells: 0 };
-                const buyVol = (vol24h * 0.6).toFixed(0); // Estimasi distribusi volume
-                const sellVol = (vol24h * 0.4).toFixed(0);
-
-                const top10 = (Math.random() * (22 - 8) + 8).toFixed(2);
-                const insiders = (Math.random() * 5).toFixed(2);
-                const isMomentum = pair.volume?.m5 > (vol24h / 288) * 2; // Jika vol 5m > 2x rata-rata
+                
+                // LOGIKA TAMBAHAN: ELITE SCALPING (TAMBAHKAN)
+                const liqToMcapRatio = (liq / mcap) * 100;
+                const buyPressure = txns.buys / (txns.buys + txns.sells);
+                
+                // Syarat LAYAK BUY diperketat:
+                // 1. Rasio Liq/Mcap > 10% (Anti-Rug)
+                // 2. Buy Pressure > 55%
+                // 3. Harga sedang naik (> 3%)
+                const isBuyReady = (change > 3 && liqToMcapRatio > 10 && buyPressure > 0.55);
+                const isMomentum = pair.volume?.m5 > (vol24h / 288) * 2;
 
                 const tokenHtml = `
-                    <div class="${vault[pair.baseToken.address] ? 'vault-card' : 'ultimate-card'} p-6 relative overflow-hidden">
+                    <div class="${vault[pair.baseToken.address] ? 'vault-card' : 'ultimate-card'} p-6 overflow-hidden">
                         <div class="flex justify-between items-start mb-6">
                             <div class="flex gap-4">
                                 <div class="w-14 h-14 rounded-2xl bg-[#14f195]/10 flex items-center justify-center font-header text-[#14f195] text-xs">#${index+1}</div>
                                 <div>
                                     <div class="flex items-center gap-2">
                                         <h2 class="font-header text-xl tracking-tight uppercase">${pair.baseToken.symbol || 'UNKNWN'}</h2>
-                                        ${isMomentum ? '<span class="badge-momentum">MOMENTUM</span>' : '<span class="text-[8px] border border-white/20 px-2 rounded-full opacity-50 text-white">ACTIVE</span>'}
+                                        ${isBuyReady ? '<span class="buy-signal uppercase">🔥 LAYAK BUY</span>' : ''}
+                                        ${isMomentum && !isBuyReady ? '<span class="badge-momentum">MOMENTUM</span>' : ''}
                                     </div>
                                     <p class="text-[9px] text-white/40 font-mono mt-1">Age: <span class="text-[#14f195]">${getTimeAgo(createdAt)}</span></p>
+                                    ${liqToMcapRatio < 5 ? '<p class="ratio-warning">⚠️ LOW LIQUIDITY RATIO</p>' : ''}
                                 </div>
                             </div>
                             <button onclick="navigator.clipboard.writeText('${pair.baseToken.address}')" class="bg-white text-black text-[10px] font-bold px-5 py-2 rounded-full uppercase">Copy CA</button>
                         </div>
 
-                        <div class="grid grid-cols-2 gap-3 mb-6">
-                            <div class="bg-white/5 rounded-3xl p-4 border border-white/5 text-[11px]">
-                                <p class="text-[8px] uppercase text-white/40 mb-3 font-header tracking-widest text-center">Transaction 24H</p>
-                                <div class="flex justify-between"><span class="text-white/60">Buys</span><span class="text-[#14f195] font-bold">${txns.buys}</span></div>
-                                <div class="flex justify-between"><span class="text-white/60">Sells</span><span class="text-[#ff4b4b] font-bold">${txns.sells}</span></div>
-                            </div>
-                            <div class="bg-white/5 rounded-3xl p-4 border border-white/5 text-[11px]">
-                                <p class="text-[8px] uppercase text-white/40 mb-3 font-header tracking-widest text-center">Volume Split</p>
-                                <div class="flex justify-between"><span class="text-white/60">Buy Vol</span><span class="text-[#14f195] font-bold">$${(buyVol/1000).toFixed(0)}K</span></div>
-                                <div class="flex justify-between"><span class="text-white/60">Sell Vol</span><span class="text-[#ff4b4b] font-bold">$${(sellVol/1000).toFixed(0)}K</span></div>
-                            </div>
-                        </div>
-
-                        <div class="grid grid-cols-2 gap-3 mb-6">
-                            <div class="bg-white/5 rounded-3xl p-4 border border-white/5 text-[11px]">
-                                <p class="text-[8px] uppercase text-white/40 mb-3 font-header tracking-widest">Audit Terminal</p>
-                                <div class="flex justify-between"><span>Mint</span><span class="text-[#14f195] font-bold">OFF ✅</span></div>
-                                <div class="flex justify-between"><span>Freeze</span><span class="text-[#14f195] font-bold">OFF ✅</span></div>
+                        <div class="grid grid-cols-2 gap-3 mb-6 text-[11px]">
+                            <div class="bg-white/5 rounded-3xl p-4 border border-white/5">
+                                <p class="text-[8px] uppercase text-white/40 mb-3 font-header tracking-widest text-center">Volume Analyst</p>
+                                <div class="flex justify-between"><span>Buys</span><span class="text-[#14f195] font-bold">${txns.buys}</span></div>
+                                <div class="flex justify-between"><span>Sells</span><span class="text-[#ff4b4b] font-bold">${txns.sells}</span></div>
+                                <div class="mt-2 h-1 bg-white/10 rounded-full overflow-hidden">
+                                    <div class="h-full bg-[#14f195]" style="width: ${buyPressure * 100}%"></div>
+                                </div>
                             </div>
                             <div class="bg-white/5 rounded-3xl p-4 border border-white/5 text-center flex flex-col justify-center">
-                                <p class="text-[8px] uppercase text-white/40 mb-1 font-header tracking-widest">Growth</p>
+                                <p class="text-[8px] uppercase text-white/40 mb-1 font-header tracking-widest">Momentum</p>
                                 <div class="text-2xl font-bold ${change >= 0 ? 'text-[#14f195]' : 'text-[#ff4b4b]'}">${change >= 0 ? '+' : ''}${change}%</div>
                             </div>
                         </div>
 
                         <div class="grid grid-cols-3 gap-2 text-center mb-6">
-                            <div class="flex flex-col bg-white/5 p-2 rounded-2xl"><span class="text-[8px] text-white/30 font-header">Liq</span><span class="${getStatusClass(liq, 'liq')} font-bold text-[13px]">$${(liq/1000).toFixed(0)}K</span></div>
+                            <div class="flex flex-col bg-white/5 p-2 rounded-2xl"><span class="text-[8px] text-white/30 font-header">Liq</span><span class="text-[#14f195] font-bold text-[13px]">$${(liq/1000).toFixed(0)}K</span></div>
                             <div class="flex flex-col bg-white/5 p-2 rounded-2xl"><span class="text-[8px] text-white/30 font-header">Mcap</span><span class="font-bold text-[13px]">$${(mcap/1000).toFixed(0)}K</span></div>
-                            <div class="flex flex-col bg-white/5 p-2 rounded-2xl"><span class="text-[8px] text-white/30 font-header">Total Vol</span><span class="font-bold text-[13px] text-white/70">$${(vol24h/1000).toFixed(0)}K</span></div>
+                            <div class="flex flex-col bg-white/5 p-2 rounded-2xl"><span class="text-[8px] text-white/30 font-header">Vol 24h</span><span class="font-bold text-[13px] text-white/70">$${(vol24h/1000).toFixed(0)}K</span></div>
                         </div>
 
                         <div class="grid grid-cols-2 gap-3">
                             <a href="${pair.url}" target="_blank" class="bg-[#14f195] text-black text-[11px] font-bold py-4 rounded-2xl text-center uppercase tracking-widest shadow-lg shadow-[#14f195]/20">Open Chart</a>
                             <button class="bg-white/5 border border-white/10 text-white text-[10px] font-header py-4 rounded-2xl uppercase opacity-50">
-                                ${vault[pair.baseToken.address] ? '⚠️ In Vault' : 'Tracking...'}
+                                ${vault[pair.baseToken.address] ? '⚠️ In Vault' : 'Secured'}
                             </button>
                         </div>
                     </div>
                 `;
 
                 if (vault[pair.baseToken.address]) { vaultContainer.innerHTML += tokenHtml; } else { container.innerHTML += tokenHtml; }
-
-                if (liq > 12000 && change > 15 && !vault[pair.baseToken.address]) {
+                if (liq > 15000 && change > 15 && !vault[pair.baseToken.address]) {
                     vault[pair.baseToken.address] = Date.now();
                     localStorage.setItem('sentinel_vault', JSON.stringify(vault));
                 }
