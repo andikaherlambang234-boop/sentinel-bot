@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SENTINEL V10 GENIUS - STABLE</title>
+    <title>SENTINEL V10 GENIUS - HUD</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
@@ -29,9 +29,41 @@
         @keyframes bounce { from { transform: scale(1); } to { transform: scale(1.05); } }
         @keyframes pulse-fast { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
         .glass-panel { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.05); }
+
+        /* --- HUD OVERLAY STYLES --- */
+        #hud-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8); backdrop-filter: blur(8px);
+            z-index: 100; display: none; flex-direction: column;
+            justify-content: center; align-items: center;
+        }
+        .radar-circle {
+            width: 150px; height: 150px; border: 2px solid #14f195;
+            border-radius: 50%; position: relative; overflow: hidden;
+            box-shadow: 0 0 20px rgba(20, 241, 149, 0.3);
+        }
+        .radar-sweep {
+            position: absolute; width: 50%; height: 50%;
+            background: linear-gradient(45deg, transparent, rgba(20, 241, 149, 0.4));
+            top: 0; left: 0; transform-origin: bottom right;
+            animation: sweep 2s linear infinite;
+        }
+        @keyframes sweep { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .hud-text { font-family: 'Orbitron', sans-serif; letter-spacing: 0.3em; color: #14f195; text-shadow: 0 0 10px #14f195; }
     </style>
 </head>
 <body class="p-4 max-w-md mx-auto">
+    <!-- HUD OVERLAY -->
+    <div id="hud-overlay">
+        <div class="radar-circle mb-6">
+            <div class="radar-sweep"></div>
+        </div>
+        <div id="hud-status-text" class="hud-text text-sm uppercase animate-pulse">SYNCING CORE...</div>
+        <div class="mt-4 w-32 h-1 bg-white/10 rounded-full overflow-hidden">
+            <div id="hud-progress" class="h-full bg-[#14f195] transition-all duration-500" style="width: 0%"></div>
+        </div>
+    </div>
+
     <div class="text-center mb-6 pt-4 relative rounded-3xl p-4 border border-white/5 bg-white/[0.02]">
         <h1 class="font-header text-3xl tracking-tighter text-[#14f195]">SENTINEL <span class="text-white text-xl">V10 GENIUS</span></h1>
         <div class="flex justify-center items-center gap-2 text-[10px] mt-2 opacity-60 uppercase tracking-[0.2em]">
@@ -53,18 +85,31 @@
 
     <script>
         const CONFIG = {
-            REFRESH_RATE: 12, 
+            REFRESH_RATE: 10, 
             MIN_LIQUIDITY: 8000, 
             MIN_VOLUME: 15000,
             RPC_URL: 'https://api.mainnet-beta.solana.com',
-            MEMORY_LIFESPAN: 3600000,
-            CRASH_THRESHOLD: 0.2
         };
 
         let timeLeft = CONFIG.REFRESH_RATE;
         let vault = JSON.parse(localStorage.getItem('sentinel_vault_v10') || '{}');
         let notifiedTokens = new Set();
-        let tokenMemory = {};
+
+        // HUD CONTROL
+        function toggleHUD(show, text = "SYNCING...") {
+            const hud = document.getElementById('hud-overlay');
+            const hudText = document.getElementById('hud-status-text');
+            const hudProgress = document.getElementById('hud-progress');
+            
+            if (show) {
+                hud.style.display = 'flex';
+                hudText.innerText = text;
+                hudProgress.style.width = '30%';
+            } else {
+                hud.style.display = 'none';
+                hudProgress.style.width = '0%';
+            }
+        }
 
         async function requestNotificationPermission() {
             if ("Notification" in window) await Notification.requestPermission();
@@ -92,7 +137,6 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "getTokenLargestAccounts", params: [p.baseToken.address] })
                 });
-                if (response.status === 429) throw new Error("RateLimit");
                 const data = await response.json();
                 if (!data.result) throw new Error();
                 const accounts = data.result.value;
@@ -108,8 +152,11 @@
         async function fetchTokens() {
             const statusDot = document.getElementById('status-dot');
             const statusText = document.getElementById('api-status');
+            
             try {
+                toggleHUD(true, "SYNCING CORE...");
                 statusText.innerText = "SCANNING...";
+                
                 const profsRes = await fetch('https://api.dexscreener.com/token-profiles/latest/v1');
                 const profs = await profsRes.json();
                 const solProfiles = profs.filter(p => p.chainId === 'solana').slice(0, 30);
@@ -118,69 +165,43 @@
                 const data = await pairsRes.json();
                 const pairs = (data.pairs || []).filter(p => p.liquidity?.usd > CONFIG.MIN_LIQUIDITY);
 
-                const processedPairs = [];
-                // SEQUENTIAL PROCESSING: Menghindari blokir RPC dengan mengaudit satu per satu
-                for (const p of pairs) {
+                const processedPairs = await Promise.all(pairs.map(async (p) => {
+                    const audit = await performAudit(p);
                     const tx = p.txns?.h24 || { buys: 0, sells: 0 };
                     const buyRatio = tx.buys / (tx.buys + tx.sells || 1);
-                    const m5Change = p.// priceChange?.m5 || 0; // Fix: p.priceChange?.m5
-                    const m5 = p.priceChange?.m5 || 0;
-
-                    // MOMENTUM-FIRST: Hanya audit jika koin menunjukkan tanda pump
-                    let audit = { grade: '?', detail: 'Skipped', color: 'text-white/40', isWhaleRisk: false };
-                    if (m5 > 2 || buyRatio > 0.6) {
-                        audit = await performAudit(p);
-                        await new Promise(resolve => setTimeout(resolve, 300)); // Jeda aman antar request
-                    }
-
+                    const m5Change = p.priceChange?.m5 || 0;
+                    
                     let signal = 'NONE';
-                    if (m5 > 5 && buyRatio > 0.55) signal = 'EARLY';
-                    if (m5 > 15 && buyRatio > 0.7 && audit.grade === 'A') signal = 'SUPREME';
+                    if (m5Change > 5 && buyRatio > 0.55) signal = 'EARLY';
+                    if (m5Change > 15 && buyRatio > 0.7 && audit.grade === 'A') signal = 'SUPREME';
 
                     const volatility = (p.volume?.h24 / p.liquidity?.usd) || 0;
                     const riskReward = (audit.grade === 'A' && signal === 'EARLY') ? 'High Reward' : (audit.isWhaleRisk ? 'High Risk' : 'Moderate');
 
-                    // MEMORY BUFFER
-                    const price = p.price?.usd || 0;
-                    if (!tokenMemory[p.baseToken.address]) {
-                        tokenMemory[p.baseToken.address] = { peakPrice: price, firstSeen: Date.now() };
-                    } else if (price > tokenMemory[p.baseToken.address].peakPrice) {
-                        tokenMemory[p.baseToken.address].peakPrice = price;
+                    return { ...p, signal, audit, buyRatio, m5Change, volatility, riskReward, omniScore: (buyRatio * 50) + (m5Change * 2) };
+                }));
+
+                const geniusList = processedPairs.filter(p => {
+                    if (p.audit.grade === 'F') return false;
+                    return (p.signal === 'EARLY' || p.signal === 'SUPREME' || (p.buyRatio > 0.6 && p.m5Change > 2) || (p.omniScore > 40 && p.buyRatio > 0.6));
+                }).sort((a, b) => b.omniScore - a.omniScore);
+
+                geniusList.forEach(p => {
+                    if (!notifiedTokens.has(p.baseToken.address)) {
+                        if (p.signal === 'SUPREME' || p.signal === 'EARLY') sendPushNotification(p.baseToken.symbol, p.signal);
+                        notifiedTokens.add(p.baseToken.address);
                     }
-
-                    processedPairs.push({ ...p, signal, audit, buyRatio, m5Change: m5, volatility, riskReward, omniScore: (buyRatio * 50) + (m5 * 2) });
-                }
-
-                // GENIUS FILTER & CRASH DETECTOR
-                const finalList = [];
-                processedPairs.forEach(p => {
-                    const mem = tokenMemory[p.baseToken.address];
-                    const currentPrice = p.price?.usd || 0;
-                    if (mem && currentPrice < mem.peakPrice * CONFIG.CRASH_THRESHOLD) return;
-
-                    const isHighPotential = (p.signal === 'EARLY' || p.signal === 'SUPREME' || (p.buyRatio > 0.6 && p.m5Change > 2) || (p.omniScore > 40 && p.buyRatio > 0.6));
-                    if (isHighPotential && p.audit.grade !== 'F') finalList.push(p);
                 });
 
-                finalList.sort((a, b) => b.omniScore - a.omniScore);
-
-                geniusListNotifications(finalList);
-                render(finalList);
+                render(geniusList);
                 statusText.innerText = "ACTIVE";
                 statusDot.className = "w-2 h-2 rounded-full bg-[#14f195] animate-pulse";
+                toggleHUD(false);
             } catch (e) {
+                toggleHUD(true, "RECONNECTING SIGNAL...");
                 statusText.innerText = "RECONNECTING...";
                 statusDot.className = "w-2 h-2 rounded-full bg-red-600";
             }
-        }
-
-        function geniusListNotifications(list) {
-            list.forEach(p => {
-                if (!notifiedTokens.has(p.baseToken.address)) {
-                    if (p.signal === 'SUPREME' || p.signal === 'EARLY') sendPushNotification(p.baseToken.symbol, p.signal);
-                    notifiedTokens.add(p.baseToken.address);
-                }
-            });
         }
 
         function render(pairs) {
