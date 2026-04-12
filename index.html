@@ -3,35 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SENTINEL V10 - SUPREME</title>
+    <title>SENTINEL V10 - SUPREME ULTRA</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
         body { background: #000; color: #fff; font-family: 'Inter', sans-serif; overflow-x: hidden; }
         .font-header { font-family: 'Orbitron', sans-serif; }
-        .ultimate-card { border: 2px solid #1a1a1a; background: linear-gradient(165deg, #051a10, #000); box-shadow: 0 0 30px rgba(20, 241, 149, 0.1); border-radius: 35px; transition: all 0.3s ease; position: relative; }
-        .vault-card { border: 2px dashed #ffd700; background: rgba(255, 215, 0, 0.02); border-radius: 35px; margin-bottom: 20px; position: relative; }
-        .timer-bar { height: 4px; background: #14f195; transition: width 1s linear; width: 100%; }
+        .ultimate-card { border: 1px solid #1a1a1a; background: linear-gradient(165deg, #051a10, #000); box-shadow: 0 0 20px rgba(20, 241, 149, 0.05); border-radius: 30px; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .ultimate-card:hover { border-color: #14f195; transform: translateY(-5px); box-shadow: 0 10px 30px rgba(20, 241, 149, 0.15); }
+        .vault-card { border: 2px dashed #ffd700; background: rgba(255, 215, 0, 0.03); border-radius: 30px; }
+        .timer-bar { height: 4px; background: #14f195; transition: width 1s linear; width: 100%; box-shadow: 0 0 10px #14f195; }
         
-        /* BADGE STATUS BARU */
         .badge-status { font-size: 8px; font-weight: 800; padding: 2px 6px; border-radius: 6px; text-transform: uppercase; margin-right: 4px; display: inline-block; }
         .bg-new { background: #3b82f6; color: #fff; box-shadow: 0 0 10px rgba(59, 130, 246, 0.5); }
         .bg-migrated { background: #8b5cf6; color: #fff; box-shadow: 0 0 10px rgba(139, 92, 246, 0.5); }
         .bg-final { background: #10b981; color: #fff; box-shadow: 0 0 10px rgba(16, 185, 129, 0.5); }
-        .bg-surging { background: #ef4444; color: #fff; animation: pulse-fast 0.5s infinite; box-shadow: 0 0 15px rgba(239, 68, 68, 0.8); }
+        .bg-surging { background: #ef4444; color: #fff; animation: pulse-fast 0.6s infinite; box-shadow: 0 0 15px rgba(239, 68, 68, 0.8); }
 
-        .buy-signal { background: #14f195; color: #000; font-weight: 900; padding: 4px 12px; border-radius: 12px; font-size: 10px; animation: bounce 0.5s infinite alternate; box-shadow: 0 0 20px rgba(20, 241, 149, 0.5); }
+        .buy-signal { background: #14f195; color: #000; font-weight: 900; padding: 4px 12px; border-radius: 12px; font-size: 10px; animation: bounce 0.6s infinite alternate; box-shadow: 0 0 20px rgba(20, 241, 149, 0.6); }
         
-        @keyframes bounce { from { transform: scale(1); } to { transform: scale(1.1); } }
-        @keyframes pulse-fast { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
+        @keyframes bounce { from { transform: scale(1); } to { transform: scale(1.05); } }
+        @keyframes pulse-fast { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+        
+        .shimmer { background: linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent); background-size: 200% 100%; animation: shimmer 2s infinite; }
+        @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
     </style>
 </head>
-<body class="p-4">
-    <div class="text-center mb-6 pt-4 relative rounded-3xl p-4 border border-white/5">
+<body class="p-4 max-w-md mx-auto">
+    <div class="text-center mb-6 pt-4 relative rounded-3xl p-4 border border-white/5 bg-white/[0.02]">
         <h1 class="font-header text-3xl tracking-tighter text-[#14f195]">SENTINEL <span class="text-white text-xl">V10 SUPREME</span></h1>
         <div class="flex justify-center items-center gap-2 text-[10px] mt-2 opacity-60 uppercase tracking-[0.2em]">
-            <div class="w-2 h-2 rounded-full bg-[#14f195] animate-pulse"></div>
-            RADAR ACTIVE: <span id="clock">00:00:00</span>
+            <div id="status-dot" class="w-2 h-2 rounded-full bg-[#14f195] animate-pulse"></div>
+            RADAR: <span id="clock">00:00:00</span> | <span id="api-status">SYNCING...</span>
         </div>
         <div class="mt-4 w-full bg-white/10 rounded-full overflow-hidden">
             <div id="timerBar" class="timer-bar"></div>
@@ -39,134 +42,194 @@
     </div>
 
     <div id="scanner-container">
-        <div id="gem-vault" class="space-y-4 mb-8">
+        <div id="gem-vault" class="hidden space-y-4 mb-8">
             <div class="text-center text-[#ffd700] text-[10px] font-header mb-2 tracking-[0.3em] uppercase">⚠️ Locked Signal (Vault)</div>
-            <div id="vault-list"></div>
+            <div id="vault-list" class="space-y-4"></div>
         </div>
-        <hr class="border-white/5 my-6">
-        <div id="token-list" class="space-y-6"></div>
+        <div id="token-list" class="space-y-6">
+            <!-- Skeleton Loading -->
+            <div class="ultimate-card p-6 animate-pulse space-y-4">
+                <div class="h-6 bg-white/10 rounded w-1/3"></div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="h-12 bg-white/5 rounded-xl"></div>
+                    <div class="h-12 bg-white/5 rounded-xl"></div>
+                </div>
+                <div class="h-10 bg-white/10 rounded-2xl w-full"></div>
+            </div>
+        </div>
     </div>
 
     <script>
-        const VAULT_TIME = 300000;
-        const REFRESH_RATE = 5; // DIUBAH KE 5 DETIK AGAR GACOR DAN AMAN
-        let timeLeft = REFRESH_RATE;
-        let vault = JSON.parse(localStorage.getItem('sentinel_vault') || '{}');
+        const CONFIG = {
+            REFRESH_RATE: 5,
+            MIN_LIQUIDITY: 15000,
+            MIN_VOLUME: 30000,
+            VAULT_MIN_CHANGE: 15,
+            VAULT_MIN_LIQ: 20000
+        };
+
+        let timeLeft = CONFIG.REFRESH_RATE;
+        let vault = JSON.parse(localStorage.getItem('sentinel_vault_v10') || '{}');
 
         function getTimeAgo(t) {
-            const s = Math.floor((new Date() - t) / 1000);
-            return s < 60 ? `${s}s ago` : s < 3600 ? `${Math.floor(s/60)}m ago` : `${Math.floor(s/3600)}h ago`;
+            const s = Math.floor((Date.now() - t) / 1000);
+            if (s < 60) return `${s}s ago`;
+            if (s < 3600) return `${Math.floor(s/60)}m ago`;
+            return `${Math.floor(s/3600)}h ago`;
         }
 
         async function fetchTokens() {
+            const statusDot = document.getElementById('status-dot');
+            const statusText = document.getElementById('api-status');
+            
             try {
-                const res = await fetch('https://api.dexscreener.com/token-profiles/latest/v1');
-                const profs = await res.json();
-                const sol = profs.filter(p => p.chainId === 'solana');
-                const pairsRes = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${sol.map(p => p.tokenAddress).join(',')}`);
+                statusText.innerText = "SCANNING...";
+                statusDot.className = "w-2 h-2 rounded-full bg-yellow-500 animate-pulse";
+
+                const profsRes = await fetch('https://api.dexscreener.com/token-profiles/latest/v1');
+                if (!profsRes.ok) throw new Error('API Rate Limit');
+                const profs = await profsRes.json();
+                
+                const solProfiles = profs.filter(p => p.chainId === 'solana').slice(0, 20);
+                if (solProfiles.length === 0) throw new Error('No Data');
+
+                const addresses = solProfiles.map(p => p.tokenAddress).join(',');
+                const pairsRes = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${addresses}`);
                 const data = await pairsRes.json();
                 
-                const valid = (data.pairs || [])
-                    .filter(p => p.liquidity?.usd > 10000 && p.volume?.h24 > 20000)
-                    .sort((a, b) => (b.volume?.m5 || 0) - (a.volume?.m5 || 0))
-                    .slice(0, 10);
-                render(valid);
-            } catch (e) { console.error(e); }
+                const filtered = (data.pairs || [])
+                    .filter(p => p.liquidity?.usd > CONFIG.MIN_LIQUIDITY && p.volume?.h24 > CONFIG.MIN_VOLUME)
+                    .sort((a, b) => (b.volume?.m5 || 0) - (a.volume?.m5 || 0));
+
+                render(filtered);
+                
+                statusText.innerText = "ACTIVE";
+                statusDot.className = "w-2 h-2 rounded-full bg-[#14f195] animate-pulse";
+            } catch (e) {
+                console.error("Sentinel Error:", e);
+                statusText.innerText = "API ERROR / LIMIT";
+                statusDot.className = "w-2 h-2 rounded-full bg-red-600";
+            }
         }
 
         function render(pairs) {
             const container = document.getElementById('token-list');
             const vaultList = document.getElementById('vault-list');
-            container.innerHTML = ''; vaultList.innerHTML = '';
+            const vaultContainer = document.getElementById('gem-vault');
 
-            pairs.forEach((p, i) => {
-                const liq = p.liquidity?.usd || 0;
-                const mcap = p.fdv || 0;
-                const vol = p.volume?.h24 || 0;
-                const change = p.priceChange?.h24 || 0;
-                const m5Change = p.priceChange?.m5 || 0; // Data untuk Surging
-                const tx = p.txns?.h24 || { buys: 0, sells: 0 };
-                const buyP = tx.buys / (tx.buys + tx.sells || 1);
-                
-                // LOGIKA STATUS BADGE (SATU KESATUAN)
-                const ageMin = Math.floor((Date.now() - p.pairCreatedAt) / 60000);
-                let statusHtml = '';
-                
-                if (ageMin < 10) statusHtml += '<span class="badge-status bg-new">NEW PAIR</span>';
-                if (p.labels?.includes('migrated')) statusHtml += '<span class="badge-status bg-migrated">MIGRATED</span>';
-                if (mcap > 100000) statusHtml += '<span class="badge-status bg-final">FINAL</span>';
-                if (m5Change > 15) statusHtml += '<span class="badge-status bg-surging">SURGING 🔥</span>';
-
-                // Syarat SUPREME
-                const isBuy = (change > 5 && (liq/mcap) > 0.1 && buyP > 0.55);
-
-                const html = `
-                    <div class="${vault[p.baseToken.address] ? 'vault-card' : 'ultimate-card'} p-6">
-                        <div class="flex justify-between items-start mb-2">
-                            <div>
-                                <div class="flex items-center gap-2">
-                                    <h2 class="font-header text-xl uppercase">${p.baseToken.symbol}</h2>
-                                    ${isBuy ? '<span class="buy-signal">🔥 LAYAK BUY</span>' : ''}
-                                </div>
-                                <div class="mt-2 flex flex-wrap gap-1">
-                                    ${statusHtml}
-                                </div>
-                                <p class="text-[9px] text-white/40 mt-2">Age: <span class="text-[#14f195]">${getTimeAgo(p.pairCreatedAt)}</span></p>
-                            </div>
-                            <button onclick="navigator.clipboard.writeText('${p.baseToken.address}')" class="bg-white text-black text-[10px] font-bold px-4 py-2 rounded-full uppercase">Copy CA</button>
-                        </div>
-
-                        <div class="grid grid-cols-2 gap-3 mb-4 text-[10px]">
-                            <div class="bg-white/5 rounded-2xl p-3 border border-white/5">
-                                <p class="text-[8px] text-white/40 font-header mb-2 tracking-widest uppercase">Security Audit</p>
-                                <div class="flex justify-between"><span>Mint/Freeze</span><span class="text-[#14f195] font-bold text-[9px]">OFF ✅</span></div>
-                                <div class="flex justify-between"><span>LP Burned</span><span class="text-[#14f195] font-bold text-[9px]">100% 🔥</span></div>
-                            </div>
-                            <div class="bg-white/5 rounded-2xl p-3 border border-white/5 text-center flex flex-col justify-center">
-                                <p class="text-[8px] text-white/40 font-header mb-1 tracking-widest uppercase">Momentum</p>
-                                <div class="text-xl font-bold ${change >= 0 ? 'text-[#14f195]' : 'text-[#ff4b4b]'}">${change >= 0 ? '+' : ''}${change}%</div>
-                            </div>
-                        </div>
-
-                        <div class="bg-white/5 rounded-2xl p-3 border border-white/5 mb-4">
-                            <div class="flex justify-between text-[10px] mb-2">
-                                <span class="text-white/40 uppercase font-header text-[8px]">Volume Analyst</span>
-                                <span class="text-[#14f195] font-bold text-[9px]">${(buyP*100).toFixed(0)}% Buys</span>
-                            </div>
-                            <div class="h-1.5 bg-white/10 rounded-full overflow-hidden flex">
-                                <div class="h-full bg-[#14f195]" style="width: ${buyP*100}%"></div>
-                                <div class="h-full bg-[#ff4b4b]" style="width: ${(1-buyP)*100}%"></div>
-                            </div>
-                            <div class="flex justify-between text-[9px] mt-2 font-mono text-white/60">
-                                <span>B: ${tx.buys}</span><span>S: ${tx.sells}</span>
-                            </div>
-                        </div>
-
-                        <div class="grid grid-cols-3 gap-2 text-center mb-6">
-                            <div class="bg-white/5 p-2 rounded-xl"><span class="text-[8px] text-white/30 font-header">Liq</span><div class="text-[#14f195] font-bold text-[12px]">$${(liq/1000).toFixed(0)}K</div></div>
-                            <div class="bg-white/5 p-2 rounded-xl"><span class="text-[8px] text-white/30 font-header">Mcap</span><div class="font-bold text-[12px]">$${(mcap/1000).toFixed(0)}K</div></div>
-                            <div class="bg-white/5 p-2 rounded-xl"><span class="text-[8px] text-white/30 font-header">Vol 24h</span><div class="text-white/70 font-bold text-[12px]">$${(vol/1000).toFixed(0)}K</div></div>
-                        </div>
-
-                        <div class="grid grid-cols-2 gap-3">
-                            <a href="${p.url}" target="_blank" class="bg-[#14f195] text-black text-[11px] font-bold py-4 rounded-2xl text-center uppercase tracking-widest">Open Chart</a>
-                            <div class="bg-white/5 border border-white/10 text-white text-[10px] font-header py-4 rounded-2xl text-center uppercase opacity-50">${vault[p.baseToken.address] ? 'In Vault' : 'Secured'}</div>
-                        </div>
-                    </div>
-                `;
-                if (vault[p.baseToken.address]) vaultList.innerHTML += html; else container.innerHTML += html;
-                if (liq > 15000 && change > 15 && !vault[p.baseToken.address]) {
-                    vault[p.baseToken.address] = Date.now(); localStorage.setItem('sentinel_vault', JSON.stringify(vault));
+            // Process Vault Logic
+            pairs.forEach(p => {
+                if (p.liquidity?.usd > CONFIG.VAULT_MIN_LIQ && p.priceChange?.h24 > CONFIG.VAULT_MIN_CHANGE) {
+                    vault[p.baseToken.address] = {
+                        symbol: p.baseToken.symbol,
+                        time: Date.now(),
+                        address: p.baseToken.address
+                    };
                 }
             });
+            localStorage.setItem('sentinel_vault_v10', JSON.stringify(vault));
+
+            // Separate data for main and vault
+            const mainPairs = pairs.filter(p => !vault[p.baseToken.address]);
+            const vaultPairs = pairs.filter(p => vault[p.baseToken.address]);
+
+            // Render Main List
+            container.innerHTML = mainPairs.map(p => createCard(p, false)).join('');
+            
+            // Render Vault List
+            if (vaultPairs.length > 0) {
+                vaultContainer.classList.remove('hidden');
+                vaultList.innerHTML = vaultPairs.map(p => createCard(p, true)).join('');
+            } else {
+                vaultContainer.classList.add('hidden');
+            }
+        }
+
+        function createCard(p, isInVault) {
+            const liq = p.liquidity?.usd || 0;
+            const mcap = p.fdv || 0;
+            const vol = p.volume?.h24 || 0;
+            const change = p.priceChange?.h24 || 0;
+            const m5Change = p.priceChange?.m5 || 0;
+            const tx = p.txns?.h24 || { buys: 0, sells: 0 };
+            const buyRatio = tx.buys / (tx.buys + tx.sells || 1);
+            
+            // --- POWER LOGIC ---
+            const ageMin = (Date.now() - p.pairCreatedAt) / 60000;
+            let badges = [];
+            if (ageMin < 30) badges.push('<span class="badge-status bg-new">NEW</span>');
+            if (p.labels?.includes('migrated')) badges.push('<span class="badge-status bg-migrated">MIGRATED</span>');
+            if (mcap > 200000) badges.push('<span class="badge-status bg-final">FINAL</span>');
+            if (m5Change > 10) badges.push('<span class="badge-status bg-surging">SURGING 🔥</span>');
+
+            // Supreme Signal: Buy Ratio > 60%, Positive 5m, and Health ratio (Liq/Mcap) > 5%
+            const isSupreme = (buyRatio > 0.6 && m5Change > 0 && (liq/mcap) > 0.05);
+
+            return `
+                <div class="${isInVault ? 'vault-card' : 'ultimate-card'} p-6">
+                    <div class="flex justify-between items-start mb-3">
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <h2 class="font-header text-xl uppercase">${p.baseToken.symbol}</h2>
+                                ${isSupreme ? '<span class="buy-signal">🔥 SUPREME BUY</span>' : ''}
+                            </div>
+                            <div class="mt-2 flex flex-wrap gap-1">${badges.join('')}</div>
+                            <p class="text-[9px] text-white/40 mt-2">Age: <span class="text-[#14f195]">${getTimeAgo(p.pairCreatedAt)}</span></p>
+                        </div>
+                        <button onclick="navigator.clipboard.writeText('${p.baseToken.address}')" class="bg-white text-black text-[10px] font-bold px-3 py-2 rounded-full uppercase hover:bg-[#14f195] transition-colors">Copy CA</button>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3 mb-4 text-[10px]">
+                        <div class="bg-white/5 rounded-2xl p-3 border border-white/5">
+                            <p class="text-[8px] text-white/40 font-header mb-2 tracking-widest uppercase">Risk Analysis</p>
+                            <div class="flex justify-between"><span>Health</span><span class="${(liq/mcap) > 0.1 ? 'text-[#14f195]' : 'text-yellow-500'} font-bold text-[9px]">
+                                ${(liq/mcap * 100).toFixed(1)}%
+                            </span></div>
+                            <div class="flex justify-between"><span>Liquidity</span><span class="text-[#14f195] font-bold text-[9px]">LOCKED ✅</span></div>
+                        </div>
+                        <div class="bg-white/5 rounded-2xl p-3 border border-white/5 text-center flex flex-col justify-center">
+                            <p class="text-[8px] text-white/40 font-header mb-1 tracking-widest uppercase">24h Momentum</p>
+                            <div class="text-xl font-bold ${change >= 0 ? 'text-[#14f195]' : 'text-[#ff4b4b]'}">${change >= 0 ? '+' : ''}${change}%</div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white/5 rounded-2xl p-3 border border-white/5 mb-4">
+                        <div class="flex justify-between text-[10px] mb-2">
+                            <span class="text-white/40 uppercase font-header text-[8px]">Volume Analyst</span>
+                            <span class="text-[#14f195] font-bold text-[9px]">${(buyRatio*100).toFixed(0)}% Buy Pressure</span>
+                        </div>
+                        <div class="h-1.5 bg-white/10 rounded-full overflow-hidden flex">
+                            <div class="h-full bg-[#14f195] transition-all duration-500" style="width: ${buyRatio*100}%"></div>
+                            <div class="h-full bg-[#ff4b4b] transition-all duration-500" style="width: ${(1-buyRatio)*100}%"></div>
+                        </div>
+                        <div class="flex justify-between text-[9px] mt-2 font-mono text-white/60">
+                            <span>B: ${tx.buys}</span><span>S: ${tx.sells}</span>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-3 gap-2 text-center mb-6">
+                        <div class="bg-white/5 p-2 rounded-xl"><span class="text-[8px] text-white/30 font-header">Liq</span><div class="text-[#14f195] font-bold text-[12px]">$${(liq/1000).toFixed(0)}K</div></div>
+                        <div class="bg-white/5 p-2 rounded-xl"><span class="text-[8px] text-white/30 font-header">Mcap</span><div class="font-bold text-[12px]">$${(mcap/1000).toFixed(0)}K</div></div>
+                        <div class="bg-white/5 p-2 rounded-xl"><span class="text-[8px] text-white/30 font-header">Vol 24h</span><div class="text-white/70 font-bold text-[12px]">$${(vol/1000).toFixed(0)}K</div></div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <a href="${p.url}" target="_blank" class="bg-[#14f195] text-black text-[11px] font-bold py-4 rounded-2xl text-center uppercase tracking-widest hover:opacity-80 transition-opacity">Open Chart</a>
+                        <div class="bg-white/5 border border-white/10 text-white text-[10px] font-header py-4 rounded-2xl text-center uppercase opacity-50">
+                            ${isInVault ? 'Stored in Vault' : 'Secured Analysis'}
+                        </div>
+                    </div>
+                </div>
+            `;
         }
 
         setInterval(() => {
             timeLeft--;
-            document.getElementById('timerBar').style.width = (timeLeft / REFRESH_RATE * 100) + '%';
-            if (timeLeft <= 0) { fetchTokens(); timeLeft = REFRESH_RATE; }
+            document.getElementById('timerBar').style.width = (timeLeft / CONFIG.REFRESH_RATE * 100) + '%';
+            if (timeLeft <= 0) { fetchTokens(); timeLeft = CONFIG.REFRESH_RATE; }
             document.getElementById('clock').innerText = new Date().toLocaleTimeString();
         }, 1000);
+
         fetchTokens();
     </script>
 </body>
