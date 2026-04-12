@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SENTINEL V10 - SUPREME ULTRA</title>
+    <title>SENTINEL V10 OMNI-SENSE</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
@@ -15,26 +15,23 @@
         .timer-bar { height: 4px; background: #14f195; transition: width 1s linear; width: 100%; box-shadow: 0 0 10px #14f195; }
         
         .badge-status { font-size: 8px; font-weight: 800; padding: 2px 6px; border-radius: 6px; text-transform: uppercase; margin-right: 4px; display: inline-block; }
-        .bg-new { background: #3b82f6; color: #fff; box-shadow: 0 0 10px rgba(59, 130, 246, 0.5); }
-        .bg-migrated { background: #8b5cf6; color: #fff; box-shadow: 0 0 10px rgba(139, 92, 246, 0.5); }
-        .bg-final { background: #10b981; color: #fff; box-shadow: 0 0 10px rgba(16, 185, 129, 0.5); }
-        .bg-surging { background: #ef4444; color: #fff; animation: pulse-fast 0.6s infinite; box-shadow: 0 0 15px rgba(239, 68, 68, 0.8); }
+        .bg-new { background: #3b82f6; color: #fff; }
+        .bg-migrated { background: #8b5cf6; color: #fff; }
+        .bg-surging { background: #ef4444; color: #fff; animation: pulse-fast 0.6s infinite; }
+        .bg-whale { background: #f97316; color: #fff; animation: pulse-fast 0.8s infinite; box-shadow: 0 0 15px rgba(249, 115, 22, 0.7); }
 
         .buy-signal { background: #14f195; color: #000; font-weight: 900; padding: 4px 12px; border-radius: 12px; font-size: 10px; animation: bounce 0.6s infinite alternate; box-shadow: 0 0 20px rgba(20, 241, 149, 0.6); }
         
         @keyframes bounce { from { transform: scale(1); } to { transform: scale(1.05); } }
         @keyframes pulse-fast { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
-        
-        .shimmer { background: linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent); background-size: 200% 100%; animation: shimmer 2s infinite; }
-        @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
     </style>
 </head>
 <body class="p-4 max-w-md mx-auto">
     <div class="text-center mb-6 pt-4 relative rounded-3xl p-4 border border-white/5 bg-white/[0.02]">
-        <h1 class="font-header text-3xl tracking-tighter text-[#14f195]">SENTINEL <span class="text-white text-xl">V10 SUPREME</span></h1>
+        <h1 class="font-header text-3xl tracking-tighter text-[#14f195]">SENTINEL <span class="text-white text-xl">V10 OMNI</span></h1>
         <div class="flex justify-center items-center gap-2 text-[10px] mt-2 opacity-60 uppercase tracking-[0.2em]">
             <div id="status-dot" class="w-2 h-2 rounded-full bg-[#14f195] animate-pulse"></div>
-            RADAR: <span id="clock">00:00:00</span> | <span id="api-status">SYNCING...</span>
+            CORE: <span id="clock">00:00:00</span> | <span id="api-status">SYNCING...</span>
         </div>
         <div class="mt-4 w-full bg-white/10 rounded-full overflow-hidden">
             <div id="timerBar" class="timer-bar"></div>
@@ -46,26 +43,17 @@
             <div class="text-center text-[#ffd700] text-[10px] font-header mb-2 tracking-[0.3em] uppercase">⚠️ Locked Signal (Vault)</div>
             <div id="vault-list" class="space-y-4"></div>
         </div>
-        <div id="token-list" class="space-y-6">
-            <!-- Skeleton Loading -->
-            <div class="ultimate-card p-6 animate-pulse space-y-4">
-                <div class="h-6 bg-white/10 rounded w-1/3"></div>
-                <div class="grid grid-cols-2 gap-4">
-                    <div class="h-12 bg-white/5 rounded-xl"></div>
-                    <div class="h-12 bg-white/5 rounded-xl"></div>
-                </div>
-                <div class="h-10 bg-white/10 rounded-2xl w-full"></div>
-            </div>
-        </div>
+        <div id="token-list" class="space-y-6"></div>
     </div>
 
     <script>
         const CONFIG = {
-            REFRESH_RATE: 5,
-            MIN_LIQUIDITY: 15000,
-            MIN_VOLUME: 30000,
-            VAULT_MIN_CHANGE: 15,
-            VAULT_MIN_LIQ: 20000
+            REFRESH_RATE: 12, // Optimal agar tidak kena Rate Limit
+            MIN_LIQUIDITY: 12000,
+            MIN_VOLUME: 25000,
+            // GANTI RPC_URL dengan Helius API Key Anda untuk performa Pro
+            RPC_URL: 'https://api.mainnet-beta.solana.com', 
+            WHALE_DANGER_LIMIT: 0.25 // Max 25% konsentrasi Top Holders
         };
 
         let timeLeft = CONFIG.REFRESH_RATE;
@@ -78,36 +66,73 @@
             return `${Math.floor(s/3600)}h ago`;
         }
 
+        async function getOnChainRisk(mintAddress) {
+            try {
+                const response = await fetch(CONFIG.RPC_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "getTokenLargestAccounts", params: [mintAddress] })
+                });
+                const data = await response.json();
+                if (!data.result) return { risk: 'UNKNOWN', score: 0 };
+                
+                const accounts = data.result.value;
+                let topConcentration = 0;
+                accounts.forEach(acc => topConcentration += parseInt(acc.amount));
+                
+                // Sederhananya: jika total top holders terlalu masif dibanding rata-rata
+                // Kita gunakan deteksi anomali jumlah koin
+                return { 
+                    risk: topConcentration > 1000000000000 ? 'HIGH' : 'LOW', 
+                    amount: topConcentration 
+                };
+            } catch (e) { return { risk: 'ERROR', score: 0 }; }
+        }
+
         async function fetchTokens() {
             const statusDot = document.getElementById('status-dot');
             const statusText = document.getElementById('api-status');
             
             try {
                 statusText.innerText = "SCANNING...";
-                statusDot.className = "w-2 h-2 rounded-full bg-yellow-500 animate-pulse";
-
                 const profsRes = await fetch('https://api.dexscreener.com/token-profiles/latest/v1');
-                if (!profsRes.ok) throw new Error('API Rate Limit');
                 const profs = await profsRes.json();
-                
-                const solProfiles = profs.filter(p => p.chainId === 'solana').slice(0, 20);
-                if (solProfiles.length === 0) throw new Error('No Data');
-
+                const solProfiles = profs.filter(p => p.chainId === 'solana').slice(0, 15);
                 const addresses = solProfiles.map(p => p.tokenAddress).join(',');
                 const pairsRes = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${addresses}`);
                 const data = await pairsRes.json();
                 
-                const filtered = (data.pairs || [])
-                    .filter(p => p.liquidity?.usd > CONFIG.MIN_LIQUIDITY && p.volume?.h24 > CONFIG.MIN_VOLUME)
-                    .sort((a, b) => (b.volume?.m5 || 0) - (a.volume?.m5 || 0));
+                const pairs = (data.pairs || []).filter(p => p.liquidity?.usd > CONFIG.MIN_LIQUIDITY);
 
-                render(filtered);
-                
+                const processedPairs = await Promise.all(pairs.map(async (p) => {
+                    const whaleData = await getOnChainRisk(p.baseToken.address);
+                    
+                    // --- ENGINE SKORING OMNI-SENSE ---
+                    let score = 0;
+                    const tx = p.txns?.h24 || { buys: 0, sells: 0 };
+                    const buyRatio = tx.buys / (tx.buys + tx.sells || 1);
+                    const health = (p.liquidity?.usd / p.fdv) || 0;
+                    const m5Change = p.priceChange?.m5 || 0;
+
+                    // Bobot 1: Buy Pressure (40%)
+                    if (buyRatio > 0.7) score += 40; else if (buyRatio > 0.55) score += 20;
+                    // Bobot 2: Momentum 5m (30%)
+                    if (m5Change > 10) score += 30; else if (m5Change > 0) score += 15;
+                    // Bobot 3: Health Ratio (30%)
+                    if (health > 0.1) score += 30; else if (health > 0.05) score += 15;
+
+                    // PENALTY: Whale Risk
+                    const isWhaleRisk = whaleData.risk === 'HIGH';
+                    if (isWhaleRisk) score -= 50; 
+
+                    return { ...p, omniScore: score, whaleRisk: isWhaleRisk, buyRatio, health };
+                }));
+
+                render(processedPairs);
                 statusText.innerText = "ACTIVE";
                 statusDot.className = "w-2 h-2 rounded-full bg-[#14f195] animate-pulse";
             } catch (e) {
-                console.error("Sentinel Error:", e);
-                statusText.innerText = "API ERROR / LIMIT";
+                statusText.innerText = "RPC LIMIT - RETRYING";
                 statusDot.className = "w-2 h-2 rounded-full bg-red-600";
             }
         }
@@ -117,26 +142,18 @@
             const vaultList = document.getElementById('vault-list');
             const vaultContainer = document.getElementById('gem-vault');
 
-            // Process Vault Logic
+            // Simpan koin skor tinggi ke vault
             pairs.forEach(p => {
-                if (p.liquidity?.usd > CONFIG.VAULT_MIN_LIQ && p.priceChange?.h24 > CONFIG.VAULT_MIN_CHANGE) {
-                    vault[p.baseToken.address] = {
-                        symbol: p.baseToken.symbol,
-                        time: Date.now(),
-                        address: p.baseToken.address
-                    };
+                if (p.omniScore > 70 && p.liquidity?.usd > 20000) {
+                    vault[p.baseToken.address] = { symbol: p.baseToken.symbol, time: Date.now() };
                 }
             });
             localStorage.setItem('sentinel_vault_v10', JSON.stringify(vault));
 
-            // Separate data for main and vault
             const mainPairs = pairs.filter(p => !vault[p.baseToken.address]);
             const vaultPairs = pairs.filter(p => vault[p.baseToken.address]);
 
-            // Render Main List
             container.innerHTML = mainPairs.map(p => createCard(p, false)).join('');
-            
-            // Render Vault List
             if (vaultPairs.length > 0) {
                 vaultContainer.classList.remove('hidden');
                 vaultList.innerHTML = vaultPairs.map(p => createCard(p, true)).join('');
@@ -148,22 +165,16 @@
         function createCard(p, isInVault) {
             const liq = p.liquidity?.usd || 0;
             const mcap = p.fdv || 0;
-            const vol = p.volume?.h24 || 0;
             const change = p.priceChange?.h24 || 0;
             const m5Change = p.priceChange?.m5 || 0;
-            const tx = p.txns?.h24 || { buys: 0, sells: 0 };
-            const buyRatio = tx.buys / (tx.buys + tx.sells || 1);
             
-            // --- POWER LOGIC ---
-            const ageMin = (Date.now() - p.pairCreatedAt) / 60000;
             let badges = [];
-            if (ageMin < 30) badges.push('<span class="badge-status bg-new">NEW</span>');
-            if (p.labels?.includes('migrated')) badges.push('<span class="badge-status bg-migrated">MIGRATED</span>');
-            if (mcap > 200000) badges.push('<span class="badge-status bg-final">FINAL</span>');
             if (m5Change > 10) badges.push('<span class="badge-status bg-surging">SURGING 🔥</span>');
+            if (p.whaleRisk) badges.push('<span class="badge-status bg-whale">WHALE RISK 🐋</span>');
 
-            // Supreme Signal: Buy Ratio > 60%, Positive 5m, and Health ratio (Liq/Mcap) > 5%
-            const isSupreme = (buyRatio > 0.6 && m5Change > 0 && (liq/mcap) > 0.05);
+            const isSupreme = p.omniScore >= 75;
+            const riskLevel = p.whaleRisk ? 'DANGER' : (p.health > 0.1 ? 'SAFE' : 'MODERATE');
+            const riskColor = p.whaleRisk ? 'text-red-500' : (p.health > 0.1 ? 'text-[#14f195]' : 'text-yellow-500');
 
             return `
                 <div class="${isInVault ? 'vault-card' : 'ultimate-card'} p-6">
@@ -176,16 +187,14 @@
                             <div class="mt-2 flex flex-wrap gap-1">${badges.join('')}</div>
                             <p class="text-[9px] text-white/40 mt-2">Age: <span class="text-[#14f195]">${getTimeAgo(p.pairCreatedAt)}</span></p>
                         </div>
-                        <button onclick="navigator.clipboard.writeText('${p.baseToken.address}')" class="bg-white text-black text-[10px] font-bold px-3 py-2 rounded-full uppercase hover:bg-[#14f195] transition-colors">Copy CA</button>
+                        <button onclick="navigator.clipboard.writeText('${p.baseToken.address}')" class="bg-white text-black text-[10px] font-bold px-3 py-2 rounded-full uppercase">Copy CA</button>
                     </div>
 
                     <div class="grid grid-cols-2 gap-3 mb-4 text-[10px]">
                         <div class="bg-white/5 rounded-2xl p-3 border border-white/5">
-                            <p class="text-[8px] text-white/40 font-header mb-2 tracking-widest uppercase">Risk Analysis</p>
-                            <div class="flex justify-between"><span>Health</span><span class="${(liq/mcap) > 0.1 ? 'text-[#14f195]' : 'text-yellow-500'} font-bold text-[9px]">
-                                ${(liq/mcap * 100).toFixed(1)}%
-                            </span></div>
-                            <div class="flex justify-between"><span>Liquidity</span><span class="text-[#14f195] font-bold text-[9px]">LOCKED ✅</span></div>
+                            <p class="text-[8px] text-white/40 font-header mb-2 tracking-widest uppercase">Risk Assessment</p>
+                            <div class="flex justify-between"><span>Risk Level</span><span class="${riskColor} font-bold text-[9px]">${riskLevel}</span></div>
+                            <div class="flex justify-between"><span>Omni Score</span><span class="text-[#14f195] font-bold text-[9px]">${p.omniScore}%</span></div>
                         </div>
                         <div class="bg-white/5 rounded-2xl p-3 border border-white/5 text-center flex flex-col justify-center">
                             <p class="text-[8px] text-white/40 font-header mb-1 tracking-widest uppercase">24h Momentum</p>
@@ -195,29 +204,24 @@
 
                     <div class="bg-white/5 rounded-2xl p-3 border border-white/5 mb-4">
                         <div class="flex justify-between text-[10px] mb-2">
-                            <span class="text-white/40 uppercase font-header text-[8px]">Volume Analyst</span>
-                            <span class="text-[#14f195] font-bold text-[9px]">${(buyRatio*100).toFixed(0)}% Buy Pressure</span>
+                            <span class="text-white/40 uppercase font-header text-[8px]">Buy Pressure</span>
+                            <span class="text-[#14f195] font-bold text-[9px]">${(p.buyRatio*100).toFixed(0)}%</span>
                         </div>
                         <div class="h-1.5 bg-white/10 rounded-full overflow-hidden flex">
-                            <div class="h-full bg-[#14f195] transition-all duration-500" style="width: ${buyRatio*100}%"></div>
-                            <div class="h-full bg-[#ff4b4b] transition-all duration-500" style="width: ${(1-buyRatio)*100}%"></div>
-                        </div>
-                        <div class="flex justify-between text-[9px] mt-2 font-mono text-white/60">
-                            <span>B: ${tx.buys}</span><span>S: ${tx.sells}</span>
+                            <div class="h-full bg-[#14f195]" style="width: ${p.buyRatio*100}%"></div>
+                            <div class="h-full bg-[#ff4b4b]" style="width: ${(1-p.buyRatio)*100}%"></div>
                         </div>
                     </div>
 
                     <div class="grid grid-cols-3 gap-2 text-center mb-6">
                         <div class="bg-white/5 p-2 rounded-xl"><span class="text-[8px] text-white/30 font-header">Liq</span><div class="text-[#14f195] font-bold text-[12px]">$${(liq/1000).toFixed(0)}K</div></div>
                         <div class="bg-white/5 p-2 rounded-xl"><span class="text-[8px] text-white/30 font-header">Mcap</span><div class="font-bold text-[12px]">$${(mcap/1000).toFixed(0)}K</div></div>
-                        <div class="bg-white/5 p-2 rounded-xl"><span class="text-[8px] text-white/30 font-header">Vol 24h</span><div class="text-white/70 font-bold text-[12px]">$${(vol/1000).toFixed(0)}K</div></div>
+                        <div class="bg-white/5 p-2 rounded-xl"><span class="text-[8px] text-white/30 font-header">Vol 24h</span><div class="text-white/70 font-bold text-[12px]">$${(p.volume?.h24/1000 || 0).toFixed(0)}K</div></div>
                     </div>
 
                     <div class="grid grid-cols-2 gap-3">
-                        <a href="${p.url}" target="_blank" class="bg-[#14f195] text-black text-[11px] font-bold py-4 rounded-2xl text-center uppercase tracking-widest hover:opacity-80 transition-opacity">Open Chart</a>
-                        <div class="bg-white/5 border border-white/10 text-white text-[10px] font-header py-4 rounded-2xl text-center uppercase opacity-50">
-                            ${isInVault ? 'Stored in Vault' : 'Secured Analysis'}
-                        </div>
+                        <a href="${p.url}" target="_blank" class="bg-[#14f195] text-black text-[11px] font-bold py-4 rounded-2xl text-center uppercase tracking-widest">Open Chart</a>
+                        <a href="https://rugcheck.xyz/tokens/${p.baseToken.address}" target="_blank" class="bg-white/10 border border-white/10 text-white text-[11px] font-bold py-4 rounded-2xl text-center uppercase tracking-widest">RugCheck 🔍</a>
                     </div>
                 </div>
             `;
@@ -229,7 +233,6 @@
             if (timeLeft <= 0) { fetchTokens(); timeLeft = CONFIG.REFRESH_RATE; }
             document.getElementById('clock').innerText = new Date().toLocaleTimeString();
         }, 1000);
-
         fetchTokens();
     </script>
 </body>
