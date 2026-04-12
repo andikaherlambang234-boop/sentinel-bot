@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SENTINEL V10 GENIUS - ULTIMATE</title>
+    <title>SENTINEL V10 GENIUS - NOTIFY</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
@@ -42,19 +42,14 @@
 
     <!-- MAIN CONTENT -->
     <div id="scanner-container">
-        <!-- VAULT SECTION -->
         <div id="gem-vault" class="hidden space-y-4 mb-8">
             <div class="text-center text-[#ffd700] text-[10px] font-header mb-2 tracking-[0.3em] uppercase">⚠️ Locked Signal (Vault)</div>
             <div id="vault-list" class="space-y-4"></div>
         </div>
-        <!-- TOKEN LIST SECTION -->
         <div id="token-list" class="space-y-6"></div>
     </div>
 
     <script>
-        /**
-         * CONFIGURATION
-         */
         const CONFIG = {
             REFRESH_RATE: 10, 
             MIN_LIQUIDITY: 8000, 
@@ -64,8 +59,27 @@
 
         let timeLeft = CONFIG.REFRESH_RATE;
         let vault = JSON.parse(localStorage.getItem('sentinel_vault_v10') || '{}');
+        let notifiedTokens = new Set(); // Untuk melacak koin yang sudah diberi notifikasi
 
-        // UTILITY: TIME FORMATTER
+        // --- NOTIFICATION SYSTEM ---
+        async function requestNotificationPermission() {
+            if ("Notification" in window) {
+                await Notification.requestPermission();
+            }
+        }
+        window.onload = requestNotificationPermission;
+
+        function sendPushNotification(tokenSymbol, signal) {
+            if (Notification.permission === "granted") {
+                const title = signal === 'SUPREME' ? "🔥 SUPREME GEM FOUND!" : "⚡ New Potential Coin!";
+                const options = {
+                    body: `${tokenSymbol} terdeteksi dengan sinyal ${signal}. Cek Sentinel sekarang!`,
+                    icon: 'https://cdn-icons-png.flaticon.com/512/2534/2534653.png'
+                };
+                new Notification(title, options);
+            }
+        }
+
         function getTimeAgo(t) {
             const s = Math.floor((Date.now() - t) / 1000);
             if (s < 60) return `${s}s ago`;
@@ -73,7 +87,6 @@
             return `${Math.floor(s/3600)}h ago`;
         }
 
-        // CORE: ON-CHAIN AUDIT ENGINE
         async function performAudit(p) {
             try {
                 const response = await fetch(CONFIG.RPC_URL, {
@@ -99,7 +112,6 @@
             }
         }
 
-        // MAIN: FETCH & FILTER ENGINE
         async function fetchTokens() {
             const statusDot = document.getElementById('status-dot');
             const statusText = document.getElementById('api-status');
@@ -129,7 +141,6 @@
                     return { ...p, signal, audit, buyRatio, m5Change, volatility, riskReward, omniScore: (buyRatio * 50) + (m5Change * 2) };
                 }));
 
-                // GENIUS ADMISSION FILTER
                 const geniusList = processedPairs.filter(p => {
                     if (p.audit.grade === 'F') return false;
                     const isHighPotential = (
@@ -141,6 +152,16 @@
                     return isHighPotential;
                 }).sort((a, b) => b.omniScore - a.omniScore);
 
+                // --- NOTIFICATION TRIGGER ---
+                geniusList.forEach(p => {
+                    if (!notifiedTokens.has(p.baseToken.address)) {
+                        if (p.signal === 'SUPREME' || p.signal === 'EARLY') {
+                            sendPushNotification(p.baseToken.symbol, p.signal);
+                        }
+                        notifiedTokens.add(p.baseToken.address);
+                    }
+                });
+
                 render(geniusList);
                 statusText.innerText = "ACTIVE";
                 statusDot.className = "w-2 h-2 rounded-full bg-[#14f195] animate-pulse";
@@ -150,7 +171,6 @@
             }
         }
 
-        // UI: RENDER ENGINE
         function render(pairs) {
             const container = document.getElementById('token-list');
             const vaultList = document.getElementById('vault-list');
@@ -164,7 +184,6 @@
             const mainPairs = pairs.filter(p => !vault[p.baseToken.address]);
             const vaultPairs = pairs.filter(p => vault[p.baseToken.address]);
 
-            // EMPTY STATE INDICATOR
             if (mainPairs.length === 0) {
                 container.innerHTML = `
                     <div class="text-center p-12 opacity-40">
@@ -185,7 +204,6 @@
             }
         }
 
-        // UI: CARD COMPONENT
         function createCard(p, isInVault) {
             const liq = p.liquidity?.usd || 0;
             const mcap = p.fdv || 0;
@@ -240,7 +258,7 @@
                         </div>
                     </div>
 
-                    <div class="glass-panel rounded-2xl p-3 border border-white/5 mb-6">
+                    <div class="glass-panel rounded-2xl p-3 border border-white/5 mb-4">
                         <div class="flex justify-between text-[10px] mb-2">
                             <span class="text-white/40 uppercase font-header text-[8px]">Order Flow Analysis</span>
                             <div class="flex gap-3">
@@ -252,6 +270,11 @@
                             <div class="h-full bg-[#14f195] rounded-full shadow-[0_0_8px_#14f195] transition-all duration-500" style="width: ${p.buyRatio*100}%"></div>
                             <div class="h-full bg-[#ff4b4b] rounded-full transition-all duration-500" style="width: ${sellRatio}%"></div>
                         </div>
+                        ${p.signal === 'SUPREME' ? `
+                            <div class="mt-3 pt-2 border-t border-white/10 text-center">
+                                <p class="text-[8px] text-[#14f195] font-bold uppercase tracking-tighter italic">Hold Strategy: Sell when Buy Pressure &lt; 60%</p>
+                            </div>
+                        ` : ''}
                     </div>
 
                     <div class="grid grid-cols-3 gap-2 text-center mb-6">
@@ -268,7 +291,6 @@
             `;
         }
 
-        // SYSTEM TIMER
         setInterval(() => {
             timeLeft--;
             document.getElementById('timerBar').style.width = (timeLeft / CONFIG.REFRESH_RATE * 100) + '%';
