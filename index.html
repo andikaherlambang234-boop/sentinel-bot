@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SENTINEL V10 GENIUS</title>
+    <title>SENTINEL V10 GENIUS - ULTIMATE</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
@@ -28,6 +28,7 @@
     </style>
 </head>
 <body class="p-4 max-w-md mx-auto">
+    <!-- HEADER SECTION -->
     <div class="text-center mb-6 pt-4 relative rounded-3xl p-4 border border-white/5 bg-white/[0.02]">
         <h1 class="font-header text-3xl tracking-tighter text-[#14f195]">SENTINEL <span class="text-white text-xl">V10 GENIUS</span></h1>
         <div class="flex justify-center items-center gap-2 text-[10px] mt-2 opacity-60 uppercase tracking-[0.2em]">
@@ -39,15 +40,21 @@
         </div>
     </div>
 
+    <!-- MAIN CONTENT -->
     <div id="scanner-container">
+        <!-- VAULT SECTION -->
         <div id="gem-vault" class="hidden space-y-4 mb-8">
             <div class="text-center text-[#ffd700] text-[10px] font-header mb-2 tracking-[0.3em] uppercase">⚠️ Locked Signal (Vault)</div>
             <div id="vault-list" class="space-y-4"></div>
         </div>
+        <!-- TOKEN LIST SECTION -->
         <div id="token-list" class="space-y-6"></div>
     </div>
 
     <script>
+        /**
+         * CONFIGURATION
+         */
         const CONFIG = {
             REFRESH_RATE: 10, 
             MIN_LIQUIDITY: 8000, 
@@ -58,6 +65,7 @@
         let timeLeft = CONFIG.REFRESH_RATE;
         let vault = JSON.parse(localStorage.getItem('sentinel_vault_v10') || '{}');
 
+        // UTILITY: TIME FORMATTER
         function getTimeAgo(t) {
             const s = Math.floor((Date.now() - t) / 1000);
             if (s < 60) return `${s}s ago`;
@@ -65,6 +73,7 @@
             return `${Math.floor(s/3600)}h ago`;
         }
 
+        // CORE: ON-CHAIN AUDIT ENGINE
         async function performAudit(p) {
             try {
                 const response = await fetch(CONFIG.RPC_URL, {
@@ -90,6 +99,7 @@
             }
         }
 
+        // MAIN: FETCH & FILTER ENGINE
         async function fetchTokens() {
             const statusDot = document.getElementById('status-dot');
             const statusText = document.getElementById('api-status');
@@ -119,6 +129,7 @@
                     return { ...p, signal, audit, buyRatio, m5Change, volatility, riskReward, omniScore: (buyRatio * 50) + (m5Change * 2) };
                 }));
 
+                // GENIUS ADMISSION FILTER
                 const geniusList = processedPairs.filter(p => {
                     if (p.audit.grade === 'F') return false;
                     const isHighPotential = (
@@ -139,6 +150,7 @@
             }
         }
 
+        // UI: RENDER ENGINE
         function render(pairs) {
             const container = document.getElementById('token-list');
             const vaultList = document.getElementById('vault-list');
@@ -152,7 +164,19 @@
             const mainPairs = pairs.filter(p => !vault[p.baseToken.address]);
             const vaultPairs = pairs.filter(p => vault[p.baseToken.address]);
 
-            container.innerHTML = mainPairs.map(p => createCard(p, false)).join('');
+            // EMPTY STATE INDICATOR
+            if (mainPairs.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center p-12 opacity-40">
+                        <div class="w-12 h-12 border-4 border-[#14f195] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                        <p class="font-header text-xs tracking-widest text-[#14f195]">SCANNING BLOCKCHAIN...</p>
+                        <p class="text-[10px] mt-2">No high-potential gems meet the strict criteria right now. Stay tuned!</p>
+                    </div>
+                `;
+            } else {
+                container.innerHTML = mainPairs.map(p => createCard(p, false)).join('');
+            }
+
             if (vaultPairs.length > 0) {
                 vaultContainer.classList.remove('hidden');
                 vaultList.innerHTML = vaultPairs.map(p => createCard(p, true)).join('');
@@ -161,6 +185,7 @@
             }
         }
 
+        // UI: CARD COMPONENT
         function createCard(p, isInVault) {
             const liq = p.liquidity?.usd || 0;
             const mcap = p.fdv || 0;
@@ -235,7 +260,6 @@
                         <div class="bg-white/5 p-2 rounded-xl"><span class="text-[8px] text-white/30 font-header">Vol 24h</span><div class="text-white/70 font-bold text-[12px]">$${(p.volume?.h24/1000 || 0).toFixed(0)}K</div></div>
                     </div>
 
-                    <!-- PERBAIKAN DISINI: Menggunakan Flexbox dengan w-full agar tombol tidak tumpang tindih -->
                     <div class="flex gap-3 w-full">
                         <a href="${p.url}" target="_blank" class="flex-1 bg-[#14f195] text-black text-[11px] font-bold py-4 rounded-2xl text-center uppercase tracking-widest hover:opacity-80 transition-opacity">Open Chart</a>
                         <a href="https://rugcheck.xyz/tokens/${p.baseToken.address}" target="_blank" class="flex-1 bg-white/10 border border-white/10 text-white text-[11px] font-bold py-4 rounded-2xl text-center uppercase tracking-widest">RugCheck 🔍</a>
@@ -244,6 +268,7 @@
             `;
         }
 
+        // SYSTEM TIMER
         setInterval(() => {
             timeLeft--;
             document.getElementById('timerBar').style.width = (timeLeft / CONFIG.REFRESH_RATE * 100) + '%';
