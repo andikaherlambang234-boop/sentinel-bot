@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SENTINEL V10 GENIUS - POLITE</title>
+    <title>SENTINEL V10 GENIUS - HYPE</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
@@ -83,17 +83,15 @@
 
     <script>
         const CONFIG = {
-            REFRESH_RATE: 20, // Lebih Sopan: Dinaikkan agar tidak kena Rate Limit
-            MIN_LIQUIDITY: 8000, 
-            MIN_VOLUME: 15000,
-            MEMORY_LIFESPAN: 3600000,
-            CRASH_THRESHOLD: 0.2
+            REFRESH_RATE: 10, 
+            MIN_LIQUIDITY: 5000, // DITURUNKAN agar koin baru lebih mudah masuk
+            MIN_VOLUME: 10000,   // DITURUNKAN agar lebih sensitif
+            RPC_URL: 'https://api.mainnet-beta.solana.com',
         };
 
         let timeLeft = CONFIG.REFRESH_RATE;
         let vault = JSON.parse(localStorage.getItem('sentinel_vault_v10') || '{}');
         let notifiedTokens = new Set();
-        let tokenMemory = {};
 
         function toggleHUD(show, text = "SYNCING...") {
             const hud = document.getElementById('hud-overlay');
@@ -122,13 +120,24 @@
             return `${Math.floor(s/3600)}h ago`;
         }
 
-        function performLiteAudit(p) {
-            const health = (p.liquidity?.usd / p.fdv) || 0;
-            const isRisk = health < 0.04; 
-            let grade = 'A'; let detail = 'Healthy Ratio'; let color = 'text-[#14f195]';
-            if (health < 0.02) { grade = 'C'; detail = 'Low Liquidity'; color = 'text-yellow-500'; }
-            else if (health < 0.06) { grade = 'B'; detail = 'Fair Ratio'; color = 'text-blue-400'; }
-            return { grade, detail, color, isWhaleRisk: isRisk };
+        async function performAudit(p) {
+            try {
+                const response = await fetch(CONFIG.RPC_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "getTokenLargestAccounts", params: [p.baseToken.address] })
+                });
+                const data = await response.json();
+                if (!data.result) throw new Error();
+                const accounts = data.// result.value;
+                const accountsList = data.result.value;
+                let concentration = 0;
+                accountsList.forEach(acc => concentration += parseInt(acc.amount));
+                const isWhaleRisk = concentration > 1000000000000; 
+                return { grade: isWhaleRisk ? 'C' : 'A', detail: isWhaleRisk ? 'High Concentration' : 'Distributed', color: isWhaleRisk ? 'text-yellow-500' : 'text-[#14f195]', isWhaleRisk };
+            } catch (e) { 
+                return { grade: '?', detail: 'Audit Pending', color: 'text-white/40', isWhaleRisk: false }; 
+            }
         }
 
         async function fetchTokens() {
@@ -140,40 +149,33 @@
                 
                 const profsRes = await fetch('https://api.dexscreener.com/token-profiles/latest/v1');
                 const profs = await profsRes.json();
-                const solProfiles = profs.filter(p => p.chainId === 'solana').slice(0, 15); // Kapasitas lebih sopan (15 koin)
+                const solProfiles = profs.filter(p => p.chainId === 'solana').slice(0, 30);
                 const addresses = solProfiles.map(p => p.tokenAddress).join(',');
                 const pairsRes = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${addresses}`);
                 const data = await pairsRes.json();
                 const pairs = (data.pairs || []).filter(p => p.liquidity?.usd > CONFIG.MIN_LIQUIDITY);
 
-                const processedPairs = pairs.map(p => {
-                    const audit = performLiteAudit(p);
+                const processedPairs = await Promise.all(pairs.map(async (p) => {
+                    const audit = await performAudit(p);
                     const tx = p.txns?.h24 || { buys: 0, sells: 0 };
                     const buyRatio = tx.buys / (tx.buys + tx.sells || 1);
                     const m5Change = p.priceChange?.m5 || 0;
                     
                     let signal = 'NONE';
-                    if (m5Change > 5 && buyRatio > 0.55) signal = 'EARLY';
+                    // RELAXED CRITERIA: Buy Ratio diturunkan ke 50% agar lebih banyak koin masuk
+                    if (m5Change > 5 && buyRatio > 0.50) signal = 'EARLY';
                     if (m5Change > 15 && buyRatio > 0.7 && audit.grade === 'A') signal = 'SUPREME';
 
                     const volatility = (p.volume?.h24 / p.liquidity?.usd) || 0;
                     const riskReward = (audit.grade === 'A' && signal === 'EARLY') ? 'High Reward' : (audit.isWhaleRisk ? 'High Risk' : 'Moderate');
 
-                    const price = p.price?.usd || 0;
-                    if (!tokenMemory[p.baseToken.address]) {
-                        tokenMemory[p.baseToken.address] = { peakPrice: price, firstSeen: Date.now() };
-                    } else if (price > tokenMemory[p.baseToken.address].peakPrice) {
-                        tokenMemory[p.baseToken.address].peakPrice = price;
-                    }
-
                     return { ...p, signal, audit, buyRatio, m5Change, volatility, riskReward, omniScore: (buyRatio * 50) + (m5Change * 2) };
-                });
+                }));
 
                 const geniusList = processedPairs.filter(p => {
-                    const mem = tokenMemory[p.baseToken.address];
-                    const currentPrice = p.price?.usd || 0;
-                    if (mem && currentPrice < mem.peakPrice * CONFIG.CRASH_THRESHOLD) return false;
-                    return (p.signal === 'EARLY' || p.signal === 'SUPREME' || (p.buyRatio > 0.6 && p.m5Change > 2) || (p.omniScore > 40 && p.buyRatio > 0.6));
+                    if (p.audit.grade === 'F') return false;
+                    // RELAXED ADMISSION: OmniScore diturunkan ke 30
+                    return (p.signal === 'EARLY' || p.signal === 'SUPREME' || (p.buyRatio > 0.55 && p.m5Change > 2) || (p.omniScore > 30 && p.buyRatio > 0.55));
                 }).sort((a, b) => b.omniScore - a.omniScore);
 
                 geniusList.forEach(p => {
@@ -188,10 +190,9 @@
                 statusDot.className = "w-2 h-2 rounded-full bg-[#14f195] animate-pulse";
                 toggleHUD(false);
             } catch (e) {
-                // SOFT ERROR: Tidak langsung merah, mencoba reconnect di background
-                statusText.innerText = "SYNCING...";
-                statusDot.className = "w-2 h-2 rounded-full bg-yellow-500 animate-pulse";
-                setTimeout(() => { toggleHUD(false); }, 2000);
+                toggleHUD(true, "RECONNECTING...");
+                statusText.innerText = "RECONNECTING...";
+                statusDot.className = "w-2 h-2 rounded-full bg-red-600";
             }
         }
 
@@ -209,7 +210,7 @@
             const vaultPairs = pairs.filter(p => vault[p.baseToken.address]);
 
             if (mainPairs.length === 0) {
-                container.innerHTML = `<div class="text-center p-12 opacity-40"><div class="w-12 h-12 border-4 border-[#14f195] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div><p class="font-header text-xs tracking-widest text-[#14f195]">SCANNING BLOCKCHAIN...</p><p class="text-[10px] mt-2">No high-potential gems meet the strict criteria right now. Stay tuned!</p></div>`;
+                container.innerHTML = `<div class="text-center p-12 opacity-40"><div class="w-12 h-12 border-4 border-[#14f195] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div><p class="font-header text-xs tracking-widest text-[#14f195]">SCANNING BLOCKCHAIN...</p><p class="text-[10px] mt-2">No high-potential gems meet the criteria. Hype Mode is Active!</p></div>`;
             } else {
                 container.innerHTML = mainPairs.map((p, index) => createCard(p, false, index + 1)).join('');
             }
