@@ -3,34 +3,36 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SENTINEL V10 ULTIMATE</title>
+    <title>SENTINEL V10 ULTRA-DETAIL</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
         body { background: #000; color: #fff; font-family: 'Inter', sans-serif; overflow-x: hidden; }
         .font-header { font-family: 'Orbitron', sans-serif; }
-        .ultimate-card { border: 1px solid #1a1a1a; background: linear-gradient(165deg, #051a10, #000); box-shadow: 0 0 20px rgba(20, 241, 149, 0.05); border-radius: 30px; transition: all 0.3s ease; }
+        .ultimate-card { border: 1px solid #1a1a1a; background: linear-gradient(165deg, #051a10, #000); box-shadow: 0 0 20px rgba(20, 241, 149, 0.05); border-radius: 30px; transition: all 0.3s ease; position: relative; overflow: hidden; }
+        .ultimate-card::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 2px; background: linear-gradient(90deg, transparent, #14f195, transparent); opacity: 0.5; }
         .vault-card { border: 2px dashed #ffd700; background: rgba(255, 215, 0, 0.03); border-radius: 30px; }
         .timer-bar { height: 4px; background: #14f195; transition: width 1s linear; width: 100%; box-shadow: 0 0 10px #14f195; }
         
         .badge-status { font-size: 8px; font-weight: 800; padding: 2px 6px; border-radius: 6px; text-transform: uppercase; margin-right: 4px; display: inline-block; }
-        .bg-new { background: #3b82f6; color: #fff; }
+        .bg-early { background: #06b6d4; color: #fff; animation: pulse-fast 0.8s infinite; box-shadow: 0 0 10px rgba(6, 182, 212, 0.5); }
         .bg-surging { background: #ef4444; color: #fff; animation: pulse-fast 0.6s infinite; }
         .bg-whale { background: #f97316; color: #fff; animation: pulse-fast 0.8s infinite; }
-        .bg-fomo { background: #a855f7; color: #fff; }
+        .bg-safe { background: #10b981; color: #fff; }
 
         .buy-signal { background: #14f195; color: #000; font-weight: 900; padding: 4px 12px; border-radius: 12px; font-size: 10px; animation: bounce 0.6s infinite alternate; box-shadow: 0 0 20px rgba(20, 241, 149, 0.6); }
         
         @keyframes bounce { from { transform: scale(1); } to { transform: scale(1.05); } }
         @keyframes pulse-fast { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+        .glass-panel { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.05); }
     </style>
 </head>
 <body class="p-4 max-w-md mx-auto">
     <div class="text-center mb-6 pt-4 relative rounded-3xl p-4 border border-white/5 bg-white/[0.02]">
-        <h1 class="font-header text-3xl tracking-tighter text-[#14f195]">SENTINEL <span class="text-white text-xl">V10 ULTIMATE</span></h1>
+        <h1 class="font-header text-3xl tracking-tighter text-[#14f195]">SENTINEL <span class="text-white text-xl">V10 ULTRA</span></h1>
         <div class="flex justify-center items-center gap-2 text-[10px] mt-2 opacity-60 uppercase tracking-[0.2em]">
             <div id="status-dot" class="w-2 h-2 rounded-full bg-[#14f195] animate-pulse"></div>
-            CORE: <span id="clock">00:00:00</span> | <span id="api-status">SYNCING...</span>
+            RADAR: <span id="clock">00:00:00</span> | <span id="api-status">SYNCING...</span>
         </div>
         <div class="mt-4 w-full bg-white/10 rounded-full overflow-hidden">
             <div id="timerBar" class="timer-bar"></div>
@@ -47,12 +49,10 @@
 
     <script>
         const CONFIG = {
-            REFRESH_RATE: 12,
-            MIN_LIQUIDITY: 12000,
-            MIN_VOLUME: 25000,
+            REFRESH_RATE: 10, 
+            MIN_LIQUIDITY: 8000, 
+            MIN_VOLUME: 15000,
             RPC_URL: 'https://api.mainnet-beta.solana.com',
-            FOMO_THRESHOLD: 5000, // Jika naik > 5000% dalam 24h, kurangi skor (Anti-Pucuk)
-            VOL_LIQ_RATIO_LIMIT: 50 // Jika Vol/Liq > 50x, tanda volatilitas ekstrim
         };
 
         let timeLeft = CONFIG.REFRESH_RATE;
@@ -65,7 +65,7 @@
             return `${Math.floor(s/3600)}h ago`;
         }
 
-        async function performAutoAudit(p) {
+        async function performAudit(p) {
             try {
                 const response = await fetch(CONFIG.RPC_URL, {
                     method: 'POST',
@@ -73,20 +73,21 @@
                     body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "getTokenLargestAccounts", params: [p.baseToken.address] })
                 });
                 const data = await response.json();
+                if (!data.result) throw new Error();
                 const accounts = data.result.value;
                 let concentration = 0;
                 accounts.forEach(acc => concentration += parseInt(acc.amount));
-                
-                const health = (p.liquidity?.usd / p.fdv) || 0;
                 const isWhaleRisk = concentration > 1000000000000; 
-                
-                let grade = 'A'; let detail = 'Secure'; let color = 'text-[#14f195]';
-                if (isWhaleRisk && health < 0.03) { grade = 'F'; detail = 'High Rug Risk'; color = 'text-red-500'; }
-                else if (isWhaleRisk || health < 0.05) { grade = 'C'; detail = 'Moderate Risk'; color = 'text-yellow-500'; }
-                else if (health < 0.1) { grade = 'B'; detail = 'Fair'; color = 'text-blue-400'; }
-
-                return { grade, detail, color, isWhaleRisk };
-            } catch (e) { return { grade: '?', detail: 'Audit Error', color: 'text-white/40', isWhaleRisk: false }; }
+                return { 
+                    grade: isWhaleRisk ? 'C' : 'A', 
+                    detail: isWhaleRisk ? 'High Concentration' : 'Distributed', 
+                    color: isWhaleRisk ? 'text-yellow-500' : 'text-[#14f195]', 
+                    isWhaleRisk,
+                    concAmount: concentration
+                };
+            } catch (e) { 
+                return { grade: '?', detail: 'Audit Pending', color: 'text-white/40', isWhaleRisk: false, concAmount: 0 }; 
+            }
         }
 
         async function fetchTokens() {
@@ -96,48 +97,34 @@
                 statusText.innerText = "SCANNING...";
                 const profsRes = await fetch('https://api.dexscreener.com/token-profiles/latest/v1');
                 const profs = await profsRes.json();
-                const solProfiles = profs.filter(p => p.chainId === 'solana').slice(0, 15);
+                const solProfiles = profs.filter(p => p.chainId === 'solana').slice(0, 20);
                 const addresses = solProfiles.map(p => p.tokenAddress).join(',');
                 const pairsRes = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${addresses}`);
                 const data = await pairsRes.json();
                 const pairs = (data.pairs || []).filter(p => p.liquidity?.usd > CONFIG.MIN_LIQUIDITY);
 
                 const processedPairs = await Promise.all(pairs.map(async (p) => {
-                    const audit = await performAutoAudit(p);
-                    
-                    // --- ULTIMATE OMNI-SENSE ENGINE ---
-                    let score = 0;
+                    const audit = await performAudit(p);
                     const tx = p.txns?.h24 || { buys: 0, sells: 0 };
                     const buyRatio = tx.buys / (tx.buys + tx.sells || 1);
                     const m5Change = p.priceChange?.m5 || 0;
-                    const h24Change = p.priceChange?.h24 || 0;
-                    const health = (p.liquidity?.usd / p.fdv) || 0;
-                    const volLiqRatio = (p.volume?.h24 / p.liquidity?.usd) || 0;
+                    
+                    let signal = 'NONE';
+                    if (m5Change > 5 && buyRatio > 0.55) signal = 'EARLY';
+                    if (m5Change > 15 && buyRatio > 0.7 && audit.grade === 'A') signal = 'SUPREME';
 
-                    // Bobot 1: Buy Pressure (40%)
-                    if (buyRatio > 0.7) score += 40; else if (buyRatio > 0.55) score += 20;
-                    // Bobot 2: Momentum 5m (30%)
-                    if (m5Change > 10) score += 30; else if (m5Change > 0) score += 15;
-                    // Bobot 3: Health Ratio (30%)
-                    if (health > 0.1) score += 30; else if (health > 0.05) score += 15;
+                    // Tambahan Data Detail untuk Tampilan
+                    const volatility = (p.volume?.h24 / p.liquidity?.usd) || 0;
+                    const riskReward = (audit.grade === 'A' && signal === 'EARLY') ? 'High Reward' : (audit.isWhaleRisk ? 'High Risk' : 'Moderate');
 
-                    // --- FILTER PENGURANG SKOR (ANTI-TRAP) ---
-                    // 1. Anti-FOMO (Jika sudah naik terlalu tinggi)
-                    if (h24Change > CONFIG.FOMO_THRESHOLD) score -= 30;
-                    // 2. Security Penalty
-                    if (audit.grade === 'F') score -= 60;
-                    if (audit.grade === 'C') score -= 30;
-                    // 3. Volatility Penalty (Vol/Liq terlalu tinggi)
-                    if (volLiqRatio > CONFIG.VOL_LIQ_RATIO_LIMIT) score -= 20;
-
-                    return { ...p, omniScore: Math.max(0, score), audit, buyRatio, volLiqRatio, h24Change };
+                    return { ...p, signal, audit, buyRatio, m5Change, volatility, riskReward };
                 }));
 
                 render(processedPairs);
                 statusText.innerText = "ACTIVE";
                 statusDot.className = "w-2 h-2 rounded-full bg-[#14f195] animate-pulse";
             } catch (e) {
-                statusText.innerText = "RPC LIMIT - RETRYING";
+                statusText.innerText = "RECONNECTING...";
                 statusDot.className = "w-2 h-2 rounded-full bg-red-600";
             }
         }
@@ -148,9 +135,7 @@
             const vaultContainer = document.getElementById('gem-vault');
 
             pairs.forEach(p => {
-                if (p.omniScore > 75 && p.audit.grade !== 'F') {
-                    vault[p.baseToken.address] = { symbol: p.baseToken.symbol, time: Date.now() };
-                }
+                if (p.signal === 'SUPREME') vault[p.baseToken.address] = { symbol: p.baseToken.symbol, time: Date.now() };
             });
             localStorage.setItem('sentinel_vault_v10', JSON.stringify(vault));
 
@@ -169,17 +154,13 @@
         function createCard(p, isInVault) {
             const liq = p.liquidity?.usd || 0;
             const mcap = p.fdv || 0;
-            const change = p.h24Change || 0;
-            const m5Change = p.priceChange?.m5 || 0;
+            const change = p.priceChange?.h24 || 0;
+            const sellRatio = (1 - p.buyRatio) * 100;
             
             let badges = [];
-            if (m5Change > 10) badges.push('<span class="badge-status bg-surging">SURGING 🔥</span>');
-            if (p.audit.isWhaleRisk) badges.push('<span class="badge-status bg-whale">WHALE RISK 🐋</span>');
-            if (change > CONFIG.FOMO_THRESHOLD) badges.push('<span class="badge-status bg-fomo">OVER-EXTENDED ⚠️</span>');
-
-            const isSupreme = p.omniScore >= 75 && p.audit.grade !== 'F';
-            const riskLevel = p.audit.grade === 'F' ? 'DANGER' : (p.volLiqRatio > CONFIG.VOL_LIQ_RATIO_LIMIT ? 'HIGH VOL' : (p.audit.grade === 'A' ? 'SAFE' : 'MODERATE'));
-            const riskColor = p.audit.grade === 'F' ? 'text-red-500' : (p.audit.grade === 'A' ? 'text-[#14f195]' : 'text-yellow-500');
+            if (p.m5Change > 10) badges.push('<span class="badge-status bg-surging">PUMPING 🔥</span>');
+            if (p.audit.isWhaleRisk) badges.push('<span class="badge-status bg-whale">WHALE 🐋</span>');
+            if (p.signal === 'EARLY') badges.push('<span class="badge-status bg-early">EARLY SIGNAL ⚡</span>');
 
             return `
                 <div class="${isInVault ? 'vault-card' : 'ultimate-card'} p-6">
@@ -187,7 +168,7 @@
                         <div>
                             <div class="flex items-center gap-2">
                                 <h2 class="font-header text-xl uppercase">${p.baseToken.symbol}</h2>
-                                ${isSupreme ? '<span class="buy-signal">🔥 SUPREME BUY</span>' : ''}
+                                ${p.signal === 'SUPREME' ? '<span class="buy-signal">🔥 SUPREME BUY</span>' : ''}
                             </div>
                             <div class="mt-2 flex flex-wrap gap-1">${badges.join('')}</div>
                             <p class="text-[9px] text-white/40 mt-2">Age: <span class="text-[#14f195]">${getTimeAgo(p.pairCreatedAt)}</span></p>
@@ -195,29 +176,49 @@
                         <button onclick="navigator.clipboard.writeText('${p.baseToken.address}')" class="bg-white text-black text-[10px] font-bold px-3 py-2 rounded-full uppercase">Copy CA</button>
                     </div>
 
+                    <!-- Detailed Audit Section -->
                     <div class="grid grid-cols-2 gap-3 mb-4 text-[10px]">
-                        <div class="bg-white/5 rounded-2xl p-3 border border-white/5">
+                        <div class="glass-panel rounded-2xl p-3 border border-white/5">
                             <p class="text-[8px] text-white/40 font-header mb-2 tracking-widest uppercase">Security Audit</p>
                             <div class="flex justify-between items-center">
-                                <span class="text-white/60">Safety Grade</span>
+                                <span class="text-white/60">Grade</span>
                                 <span class="${p.audit.color} font-bold text-lg">${p.audit.grade}</span>
                             </div>
                             <div class="text-center text-[9px] ${p.audit.color} font-medium mt-1">${p.audit.detail}</div>
                         </div>
-                        <div class="bg-white/5 rounded-2xl p-3 border border-white/5 text-center flex flex-col justify-center">
-                            <p class="text-[8px] text-white/40 font-header mb-1 tracking-widest uppercase">Risk Status</p>
-                            <div class="${riskColor} text-xl font-bold">${riskLevel}</div>
+                        <div class="glass-panel rounded-2xl p-3 border border-white/5 text-center flex flex-col justify-center">
+                            <p class="text-[8px] text-white/40 font-header mb-1 tracking-widest uppercase">Risk/Reward</p>
+                            <div class="text-sm font-bold ${p.audit.isWhaleRisk ? 'text-yellow-500' : 'text-[#14f195]'}">${p.riskReward}</div>
                         </div>
                     </div>
 
-                    <div class="bg-white/5 rounded-2xl p-3 border border-white/5 mb-4">
-                        <div class="flex justify-between text-[10px] mb-2">
-                            <span class="text-white/40 uppercase font-header text-[8px]">Omni Score (Confidence)</span>
-                            <span class="text-[#14f195] font-bold text-[9px]">${p.omniScore}%</span>
+                    <!-- Volatility & Momentum Detail -->
+                    <div class="grid grid-cols-2 gap-3 mb-4 text-[10px]">
+                        <div class="glass-panel rounded-2xl p-3 border border-white/5">
+                            <p class="text-[8px] text-white/40 font-header mb-1 tracking-widest uppercase">Volatility</p>
+                            <div class="flex justify-between items-center">
+                                <span class="text-white/60">Index</span>
+                                <span class="font-bold text-[#14f195]">${p.volatility.toFixed(1)}x</span>
+                            </div>
                         </div>
-                        <div class="h-1.5 bg-white/10 rounded-full overflow-hidden flex">
-                            <div class="h-full bg-[#14f195]" style="width: ${p.omniScore}%"></div>
-                            <div class="h-full bg-white/20" style="width: ${100-p.omniScore}%"></div>
+                        <div class="glass-panel rounded-2xl p-3 border border-white/5 text-center flex flex-col justify-center">
+                            <p class="text-[8px] text-white/40 font-header mb-1 tracking-widest uppercase">24h Change</p>
+                            <div class="text-lg font-bold ${change >= 0 ? 'text-[#14f195]' : 'text-[#ff4b4b]'}">${change >= 0 ? '+' : ''}${change}%</div>
+                        </div>
+                    </div>
+
+                    <!-- Advanced Buy Pressure Bar -->
+                    <div class="glass-panel rounded-2xl p-3 border border-white/5 mb-4">
+                        <div class="flex justify-between text-[10px] mb-2">
+                            <span class="text-white/40 uppercase font-header text-[8px]">Order Flow Analysis</span>
+                            <div class="flex gap-3">
+                                <span class="text-[#14f195] font-bold text-[9px]">Buy: ${(p.buyRatio*100).toFixed(0)}%</span>
+                                <span class="text-[#ff4b4b] font-bold text-[9px]">Sell: ${sellRatio.toFixed(0)}%</span>
+                            </div>
+                        </div>
+                        <div class="h-2 bg-white/10 rounded-full overflow-hidden flex p-0.5">
+                            <div class="h-full bg-[#14f195] rounded-full shadow-[0_0_8px_#14f195] transition-all duration-500" style="width: ${p.buyRatio*100}%"></div>
+                            <div class="h-full bg-[#ff4b4b] rounded-full transition-all duration-500" style="width: ${sellRatio}%"></div>
                         </div>
                     </div>
 
@@ -228,8 +229,8 @@
                     </div>
 
                     <div class="grid grid-cols-2 gap-3">
-                        <a href="${p.url}" target="_blank" class="bg-[#14f195] text-black text-[11px] font-bold py-4 rounded-2xl text-center uppercase tracking-widest">Open Chart</a>
-                        <a href="https://rugcheck.xyz/tokens/${p.baseToken.address}" target="_blank" class="bg-white/10 border border-white/10 text-white text-[11px] font-bold py-4 rounded-2xl text-center uppercase tracking-widest">Verify RugCheck 🔍</a>
+                        <a href="${p.url}" target="_blank" class="bg-[#14f195] text-black text-[11px] font-bold py-4 rounded-2xl text-center uppercase tracking-widest hover:opacity-80 transition-opacity">Open Chart</a>
+                        <a href="https://rugcheck.xyz/tokens/${p.baseToken.address}" target="_blank" class="bg-white/10 border border-white/10 text-white text-[11px] font-bold py-4 rounded-2xl text-center uppercase tracking-widest">RugCheck 🔍</a>
                     </div>
                 </div>
             `;
