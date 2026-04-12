@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SENTINEL V10 ULTRA-DETAIL</title>
+    <title>SENTINEL V10 GENIUS</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
@@ -29,7 +29,7 @@
 </head>
 <body class="p-4 max-w-md mx-auto">
     <div class="text-center mb-6 pt-4 relative rounded-3xl p-4 border border-white/5 bg-white/[0.02]">
-        <h1 class="font-header text-3xl tracking-tighter text-[#14f195]">SENTINEL <span class="text-white text-xl">V10 ULTRA</span></h1>
+        <h1 class="font-header text-3xl tracking-tighter text-[#14f195]">SENTINEL <span class="text-white text-xl">V10 GENIUS</span></h1>
         <div class="flex justify-center items-center gap-2 text-[10px] mt-2 opacity-60 uppercase tracking-[0.2em]">
             <div id="status-dot" class="w-2 h-2 rounded-full bg-[#14f195] animate-pulse"></div>
             RADAR: <span id="clock">00:00:00</span> | <span id="api-status">SYNCING...</span>
@@ -113,14 +113,29 @@
                     if (m5Change > 5 && buyRatio > 0.55) signal = 'EARLY';
                     if (m5Change > 15 && buyRatio > 0.7 && audit.grade === 'A') signal = 'SUPREME';
 
-                    // Tambahan Data Detail untuk Tampilan
                     const volatility = (p.volume?.h24 / p.liquidity?.usd) || 0;
                     const riskReward = (audit.grade === 'A' && signal === 'EARLY') ? 'High Reward' : (audit.isWhaleRisk ? 'High Risk' : 'Moderate');
 
-                    return { ...p, signal, audit, buyRatio, m5Change, volatility, riskReward };
+                    return { ...p, signal, audit, buyRatio, m5Change, volatility, riskReward, omniScore: (buyRatio * 50) + (m5Change * 2) };
                 }));
 
-                render(processedPairs);
+                // --- GENIUS ADMISSION CONTROLLER (FILTER KETAT) ---
+                const geniusList = processedPairs.filter(p => {
+                    // 1. Koin Grade F atau Whale ekstrem dilarang masuk list
+                    if (p.audit.grade === 'F') return false;
+                    
+                    // 2. Syarat untuk masuk list: Harus punya salah satu tanda "Potensi Pump"
+                    const isHighPotential = (
+                        p.signal === 'EARLY' || 
+                        p.signal === 'SUPREME' || 
+                        (p.buyRatio > 0.6 && p.m5Change > 2) ||
+                        (p.omniScore > 40 && p.buyRatio > 0.6)
+                    );
+                    
+                    return isHighPotential;
+                }).sort((a, b) => b.omniScore - a.omniScore); // Urutkan dari yang paling berpotensi
+
+                render(geniusList);
                 statusText.innerText = "ACTIVE";
                 statusDot.className = "w-2 h-2 rounded-full bg-[#14f195] animate-pulse";
             } catch (e) {
@@ -176,7 +191,6 @@
                         <button onclick="navigator.clipboard.writeText('${p.baseToken.address}')" class="bg-white text-black text-[10px] font-bold px-3 py-2 rounded-full uppercase">Copy CA</button>
                     </div>
 
-                    <!-- Detailed Audit Section -->
                     <div class="grid grid-cols-2 gap-3 mb-4 text-[10px]">
                         <div class="glass-panel rounded-2xl p-3 border border-white/5">
                             <p class="text-[8px] text-white/40 font-header mb-2 tracking-widest uppercase">Security Audit</p>
@@ -192,7 +206,6 @@
                         </div>
                     </div>
 
-                    <!-- Volatility & Momentum Detail -->
                     <div class="grid grid-cols-2 gap-3 mb-4 text-[10px]">
                         <div class="glass-panel rounded-2xl p-3 border border-white/5">
                             <p class="text-[8px] text-white/40 font-header mb-1 tracking-widest uppercase">Volatility</p>
@@ -207,7 +220,6 @@
                         </div>
                     </div>
 
-                    <!-- Advanced Buy Pressure Bar -->
                     <div class="glass-panel rounded-2xl p-3 border border-white/5 mb-4">
                         <div class="flex justify-between text-[10px] mb-2">
                             <span class="text-white/40 uppercase font-header text-[8px]">Order Flow Analysis</span>
@@ -225,7 +237,7 @@
                     <div class="grid grid-cols-3 gap-2 text-center mb-6">
                         <div class="bg-white/5 p-2 rounded-xl"><span class="text-[8px] text-white/30 font-header">Liq</span><div class="text-[#14f195] font-bold text-[12px]">$${(liq/1000).toFixed(0)}K</div></div>
                         <div class="bg-white/5 p-2 rounded-xl"><span class="text-[8px] text-white/30 font-header">Mcap</span><div class="font-bold text-[12px]">$${(mcap/1000).toFixed(0)}K</div></div>
-                        <div class="bg-white/5 p-2 rounded-xl"><span class="text-[8px] text-white/30 font-header">Vol 24h</span><div class="text-white/70 font-bold text-[12px]">$${(p.volume?.h24/1000 || 0).toFixed(0)}K</div></div>
+                        <div class="bg-white/5 p-2 rounded-xl"><span class="text-[8px] text-white/30 font-header">Vol 24h</span><div class="text-white/70 font-bold text=$\text{${(p.volume?.h24/1000 || 0).toFixed(0)}K</div></div>
                     </div>
 
                     <div class="grid grid-cols-2 gap-3">
