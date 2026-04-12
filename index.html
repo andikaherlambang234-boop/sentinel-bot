@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SENTINEL V10 GENIUS - HYPE</title>
+    <title>SENTINEL V10 - PROFIT 50%</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
@@ -84,8 +84,8 @@
     <script>
         const CONFIG = {
             REFRESH_RATE: 10, 
-            MIN_LIQUIDITY: 5000, // DITURUNKAN agar koin baru lebih mudah masuk
-            MIN_VOLUME: 10000,   // DITURUNKAN agar lebih sensitif
+            MIN_LIQUIDITY: 5000, 
+            MIN_VOLUME: 10000,
             RPC_URL: 'https://api.mainnet-beta.solana.com',
         };
 
@@ -129,10 +129,9 @@
                 });
                 const data = await response.json();
                 if (!data.result) throw new Error();
-                const accounts = data.// result.value;
-                const accountsList = data.result.value;
+                const accounts = data.result.value;
                 let concentration = 0;
-                accountsList.forEach(acc => concentration += parseInt(acc.amount));
+                accounts.forEach(acc => concentration += parseInt(acc.amount));
                 const isWhaleRisk = concentration > 1000000000000; 
                 return { grade: isWhaleRisk ? 'C' : 'A', detail: isWhaleRisk ? 'High Concentration' : 'Distributed', color: isWhaleRisk ? 'text-yellow-500' : 'text-[#14f195]', isWhaleRisk };
             } catch (e) { 
@@ -162,8 +161,8 @@
                     const m5Change = p.priceChange?.m5 || 0;
                     
                     let signal = 'NONE';
-                    // RELAXED CRITERIA: Buy Ratio diturunkan ke 50% agar lebih banyak koin masuk
-                    if (m5Change > 5 && buyRatio > 0.50) signal = 'EARLY';
+                    // OPTIMIZED FOR 50% TARGET: Lower threshold for earlier entry
+                    if (m5Change > 3 && buyRatio > 0.50) signal = 'EARLY';
                     if (m5Change > 15 && buyRatio > 0.7 && audit.grade === 'A') signal = 'SUPREME';
 
                     const volatility = (p.volume?.h24 / p.liquidity?.usd) || 0;
@@ -174,7 +173,7 @@
 
                 const geniusList = processedPairs.filter(p => {
                     if (p.audit.grade === 'F') return false;
-                    // RELAXED ADMISSION: OmniScore diturunkan ke 30
+                    // RELAXED ADMISSION for more opportunities
                     return (p.signal === 'EARLY' || p.signal === 'SUPREME' || (p.buyRatio > 0.55 && p.m5Change > 2) || (p.omniScore > 30 && p.buyRatio > 0.55));
                 }).sort((a, b) => b.omniScore - a.omniScore);
 
@@ -293,7 +292,9 @@
                             <div class="h-full bg-[#14f195] rounded-full shadow-[0_0_8px_#14f195] transition-all duration-500" style="width: ${p.buyRatio*100}%"></div>
                             <div class="h-full bg-[#ff4b4b] rounded-full transition-all duration-500" style="width: ${sellRatio}%"></div>
                         </div>
-                        ${p.signal === 'SUPREME' ? `<div class="mt-3 pt-2 border-t border-white/10 text-center"><p class="text-[8px] text-[#14f195] font-bold uppercase tracking-tighter italic">Hold Strategy: Sell when Buy Pressure &lt; 60%</p></div>` : ''}
+                        <div class="mt-3 pt-2 border-t border-white/10 text-center">
+                            <p class="text-[8px] text-[#14f195] font-bold uppercase tracking-tighter italic">Target Strategy: Entry Early $\rightarrow$ Profit 50%+</p>
+                        </div>
                     </div>
                     <div class="grid grid-cols-3 gap-2 text-center mb-6">
                         <div class="bg-white/5 p-2 rounded-xl"><span class="text-[8px] text-white/30 font-header">Liq</span><div class="text-[#14f195] font-bold text-[12px]">$${(liq/1000).toFixed(0)}K</div></div>
