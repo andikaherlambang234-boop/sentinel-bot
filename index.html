@@ -5,489 +5,692 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>SENTINEL V10 - PROFIT 50%</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
-        body { background: #000; color: #fff; font-family: 'Inter', sans-serif; overflow-x: hidden; }
-        .font-header { font-family: 'Orbitron', sans-serif; }
-        .ultimate-card { border: 1px solid #1a1a1a; background: linear-gradient(165deg, #051a10, #000); box-shadow: 0 0 20px rgba(20,241,149,0.05); border-radius: 30px; transition: all 0.3s ease; position: relative; overflow: hidden; }
-        .ultimate-card::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 2px; background: linear-gradient(90deg, transparent, #14f195, transparent); opacity: 0.5; }
-        .vault-card { border: 2px dashed #ffd700; background: rgba(255,215,0,0.03); border-radius: 30px; }
-        .timer-bar { height: 4px; background: #14f195; transition: width 1s linear; width: 100%; box-shadow: 0 0 10px #14f195; }
-        .badge-status { font-size: 8px; font-weight: 800; padding: 2px 6px; border-radius: 6px; text-transform: uppercase; margin-right: 4px; display: inline-block; }
-        .bg-early   { background: #06b6d4; color:#fff; animation: pulse-fast 0.8s infinite; box-shadow: 0 0 10px rgba(6,182,212,0.5); }
-        .bg-surging { background: #ef4444; color:#fff; animation: pulse-fast 0.6s infinite; }
-        .bg-whale   { background: #f97316; color:#fff; animation: pulse-fast 0.8s infinite; }
-        .bg-rank-1  { background: linear-gradient(45deg,#ffd700,#bf953f); color:#000; box-shadow:0 0 15px rgba(255,215,0,0.6); }
-        .bg-rank-2  { background: linear-gradient(45deg,#e2e8f0,#94a3b8); color:#000; box-shadow:0 0 15px rgba(226,232,240,0.5); }
-        .bg-rank-3  { background: linear-gradient(45deg,#cd7f32,#a0522d); color:#fff; box-shadow:0 0 15px rgba(205,127,50,0.5); }
-        .buy-signal { background:#14f195; color:#000; font-weight:900; padding:4px 12px; border-radius:12px; font-size:10px; animation:bounce 0.6s infinite alternate; box-shadow:0 0 20px rgba(20,241,149,0.6); }
-        @keyframes bounce    { from{transform:scale(1)} to{transform:scale(1.05)} }
-        @keyframes pulse-fast{ 0%,100%{opacity:1} 50%{opacity:0.6} }
-        .glass-panel { background:rgba(255,255,255,0.03); backdrop-filter:blur(10px); border:1px solid rgba(255,255,255,0.05); }
-        #hud-overlay { position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);backdrop-filter:blur(8px);z-index:100;display:none;flex-direction:column;justify-content:center;align-items:center; }
-        .radar-circle { width:150px;height:150px;border:2px solid #14f195;border-radius:50%;position:relative;overflow:hidden;box-shadow:0 0 20px rgba(20,241,149,0.3); }
-        .radar-sweep { position:absolute;width:50%;height:50%;background:linear-gradient(45deg,transparent,rgba(20,241,149,0.4));top:0;left:0;transform-origin:bottom right;animation:sweep 2s linear infinite; }
-        @keyframes sweep { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
-        .hud-text { font-family:'Orbitron',sans-serif;letter-spacing:0.3em;color:#14f195;text-shadow:0 0 10px #14f195; }
-        #hud-err-line { display:none;margin-top:12px;font-size:9px;color:#ff6666;font-family:monospace;letter-spacing:0.1em;text-align:center;max-width:280px;word-break:break-all; }
-        #retry-counter { font-size:9px;color:rgba(255,200,80,0.7);font-family:'Orbitron',sans-serif;margin-top:6px;display:none; }
-        #error-panel { display:none;background:rgba(255,50,50,0.07);border:1px solid rgba(255,80,80,0.3);border-radius:16px;padding:14px 16px;margin-bottom:16px; }
-        #error-panel.show { display:block; }
-        .err-code   { color:#ff5555;font-family:'Orbitron',sans-serif;font-size:9px;letter-spacing:0.2em;font-weight:700; }
-        .err-detail { color:rgba(255,255,255,0.5);font-size:10px;margin-top:6px;line-height:1.7; }
-        .err-hint   { color:rgba(255,200,100,0.7);font-size:9px;margin-top:6px;line-height:1.6;border-top:1px solid rgba(255,255,255,0.08);padding-top:6px; }
-        #retry-btn  { margin-top:10px;background:rgba(255,80,80,0.12);border:1px solid rgba(255,80,80,0.3);color:#ff8888;font-size:9px;padding:5px 14px;border-radius:8px;cursor:pointer;font-family:'Orbitron',sans-serif;letter-spacing:0.1em; }
+        :root {
+            --green: #14f195;
+            --red:   #ff4b4b;
+            --gold:  #ffd700;
+            --blue:  #06b6d4;
+        }
+        * { box-sizing: border-box; }
+        body { background: #000; color: #fff; font-family: 'Inter', sans-serif; overflow-x: hidden; -webkit-tap-highlight-color: transparent; }
+        .font-hdr { font-family: 'Orbitron', sans-serif; }
+
+        /* ── CARDS ── */
+        .gem-card {
+            border: 1px solid #1c1c1c;
+            background: linear-gradient(160deg, #050e08 0%, #000 100%);
+            box-shadow: 0 0 24px rgba(20,241,149,0.06);
+            border-radius: 28px;
+            position: relative;
+            overflow: hidden;
+            transition: box-shadow 0.3s;
+        }
+        .gem-card::before {
+            content: '';
+            position: absolute; top: 0; left: 0;
+            width: 100%; height: 2px;
+            background: linear-gradient(90deg, transparent, var(--green), transparent);
+            opacity: 0.4;
+        }
+        .vault-card {
+            border: 1.5px dashed var(--gold);
+            background: rgba(255,215,0,0.02);
+            border-radius: 28px;
+        }
+
+        /* rank borders */
+        .rank-1 { border-color: #fbbf24 !important; box-shadow: 0 0 28px rgba(251,191,36,0.35) !important; }
+        .rank-2 { border-color: #94a3b8 !important; box-shadow: 0 0 20px rgba(148,163,184,0.25) !important; }
+        .rank-3 { border-color: #c2410c !important; box-shadow: 0 0 16px rgba(194,65,12,0.25) !important; }
+
+        /* ── BADGES ── */
+        .badge { font-size: 8px; font-weight: 800; padding: 2px 7px; border-radius: 6px; text-transform: uppercase; display: inline-block; margin-right: 3px; margin-bottom: 2px; letter-spacing: 0.04em; }
+        .b-gold   { background: linear-gradient(45deg,#ffd700,#bf953f); color:#000; box-shadow:0 0 10px rgba(255,215,0,0.5); }
+        .b-silver { background: linear-gradient(45deg,#e2e8f0,#94a3b8); color:#000; }
+        .b-bronze { background: linear-gradient(45deg,#cd7f32,#a0522d); color:#fff; }
+        .b-pump   { background: #ef4444; color:#fff; animation: blink .6s infinite; }
+        .b-early  { background: var(--blue); color:#fff; animation: blink .8s infinite; box-shadow:0 0 8px rgba(6,182,212,0.4); }
+        .b-whale  { background: #f97316; color:#fff; }
+        .b-new    { background: #8b5cf6; color:#fff; animation: blink 1s infinite; }
+        .b-safe   { background: #10b981; color:#fff; }
+        .b-warn   { background: #f59e0b; color:#000; }
+        .b-danger { background: #dc2626; color:#fff; }
+        @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.55} }
+
+        /* ── SUPREME ── */
+        .supreme-badge {
+            background: var(--green); color:#000; font-weight:900;
+            padding:4px 14px; border-radius:12px; font-size:10px;
+            animation: pop .6s infinite alternate;
+            box-shadow: 0 0 22px rgba(20,241,149,0.65);
+            font-family:'Orbitron',sans-serif; letter-spacing:.05em;
+        }
+        @keyframes pop { from{transform:scale(1)} to{transform:scale(1.06)} }
+
+        /* ── GRADE RING ── */
+        .grade-ring {
+            width: 42px; height: 42px; border-radius: 50%;
+            display:flex; align-items:center; justify-content:center;
+            font-family:'Orbitron',sans-serif; font-weight:900; font-size:15px;
+            flex-shrink:0;
+        }
+        .grade-A { background:rgba(20,241,149,.15); border:2px solid var(--green); color:var(--green); }
+        .grade-B { background:rgba(96,165,250,.12); border:2px solid #60a5fa; color:#60a5fa; }
+        .grade-C { background:rgba(251,191,36,.12); border:2px solid #fbbf24; color:#fbbf24; }
+        .grade-D { background:rgba(239,68,68,.12);  border:2px solid var(--red); color:var(--red); }
+        .grade-F { background:rgba(239,68,68,.2);   border:2px solid #7f1d1d; color:#7f1d1d; }
+
+        /* ── SCORE BAR ── */
+        .score-bar-wrap { background:rgba(255,255,255,.06); border-radius:99px; overflow:hidden; height:6px; }
+        .score-bar-fill { height:100%; border-radius:99px; transition: width .6s ease; }
+
+        /* ── GLASS PANEL ── */
+        .gpanel { background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.05); border-radius:16px; padding:10px 12px; }
+
+        /* ── HUD ── */
+        #hud {
+            position:fixed;top:0;left:0;width:100%;height:100%;
+            background:rgba(0,0,0,.88);backdrop-filter:blur(10px);
+            z-index:200;display:none;flex-direction:column;
+            justify-content:center;align-items:center;
+        }
+        .radar { width:130px;height:130px;border:2px solid var(--green);border-radius:50%;position:relative;overflow:hidden;box-shadow:0 0 24px rgba(20,241,149,.3); }
+        .sweep { position:absolute;width:50%;height:50%;background:linear-gradient(45deg,transparent,rgba(20,241,149,.45));top:0;left:0;transform-origin:bottom right;animation:spin 2s linear infinite; }
+        @keyframes spin { to{transform:rotate(360deg)} }
+        .hud-label { font-family:'Orbitron',sans-serif;letter-spacing:.3em;color:var(--green);text-shadow:0 0 12px var(--green);font-size:11px; }
+
+        /* ── ERROR PANEL ── */
+        #err-panel { display:none; background:rgba(220,38,38,.07); border:1px solid rgba(220,38,38,.25); border-radius:16px; padding:14px 16px; margin-bottom:14px; }
+        #err-panel.on { display:block; }
+        .ec { color:#f87171; font-family:'Orbitron',sans-serif; font-size:8.5px; letter-spacing:.18em; }
+        .ed { color:rgba(255,255,255,.45); font-size:9.5px; margin-top:5px; line-height:1.7; }
+        .eh { color:rgba(255,200,80,.7); font-size:9px; margin-top:5px; padding-top:5px; border-top:1px solid rgba(255,255,255,.07); line-height:1.6; }
+        #retry-btn { margin-top:9px;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);color:#fca5a5;font-size:9px;padding:5px 14px;border-radius:8px;cursor:pointer;font-family:'Orbitron',sans-serif;letter-spacing:.1em; }
+
+        /* ── MISC ── */
+        .timer-bar { height:4px; background:var(--green); transition:width 1s linear; box-shadow:0 0 10px var(--green); }
+        .divider { border:none; border-top:1px solid rgba(255,255,255,.06); margin:10px 0; }
+        .stat-box { background:rgba(255,255,255,.04); border-radius:14px; padding:8px 6px; text-align:center; }
+        .open-btn { background:var(--green);color:#000;font-weight:900;border-radius:20px;padding:14px;text-align:center;text-decoration:none;display:block;font-size:11px;letter-spacing:.12em;font-family:'Orbitron',sans-serif; transition:opacity .2s; }
+        .open-btn:active { opacity:.75; }
+        .sec-btn  { background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);color:#fff;border-radius:20px;padding:14px;text-align:center;text-decoration:none;display:block;font-size:11px;letter-spacing:.1em;font-family:'Orbitron',sans-serif; }
     </style>
 </head>
 <body class="p-4 max-w-md mx-auto">
 
-<div id="hud-overlay">
-    <div class="radar-circle mb-6"><div class="radar-sweep"></div></div>
-    <div id="hud-text" class="hud-text text-sm uppercase animate-pulse">SYNCING CORE...</div>
-    <div class="mt-4 w-32 h-1 bg-white/10 rounded-full overflow-hidden">
+<!-- ═══ HUD ═══ -->
+<div id="hud">
+    <div class="radar mb-5"><div class="sweep"></div></div>
+    <div id="hud-txt" class="hud-label uppercase animate-pulse">SCANNING...</div>
+    <div class="mt-4 w-28 h-1 bg-white/10 rounded-full overflow-hidden">
         <div id="hud-bar" class="h-full bg-[#14f195] transition-all duration-500" style="width:0%"></div>
     </div>
-    <div id="hud-err-line"></div>
-    <div id="retry-counter"></div>
+    <div id="hud-sub" style="display:none;margin-top:10px;font-size:9px;color:#f87171;font-family:monospace;letter-spacing:.1em;text-align:center;max-width:260px;word-break:break-all;"></div>
+    <div id="hud-retry" style="display:none;font-size:9px;color:rgba(255,200,80,.7);font-family:'Orbitron',sans-serif;margin-top:5px;"></div>
 </div>
 
-<div class="text-center mb-4 pt-4 relative rounded-3xl p-4 border border-white/5 bg-white/[0.02]">
-    <h1 class="font-header text-3xl tracking-tighter text-[#14f195]">SENTINEL <span class="text-white text-xl">V10 GENIUS</span></h1>
-    <div class="flex justify-center items-center gap-2 text-[10px] mt-2 opacity-60 uppercase tracking-[0.2em]">
-        <div id="status-dot" class="w-2 h-2 rounded-full bg-[#14f195] animate-pulse"></div>
-        RADAR: <span id="clock">00:00:00</span> | <span id="api-status">SYNCING...</span>
+<!-- ═══ HEADER ═══ -->
+<div class="text-center mb-5 pt-3 rounded-3xl p-4 border border-white/[0.04] bg-white/[0.015]">
+    <h1 class="font-hdr text-[28px] tracking-tight text-[#14f195]">SENTINEL <span class="text-white text-[18px]">V10 GENIUS</span></h1>
+    <div class="flex justify-center items-center gap-2 text-[9px] mt-2 opacity-50 uppercase tracking-[.18em]">
+        <div id="dot" class="w-2 h-2 rounded-full bg-[#14f195] animate-pulse"></div>
+        RADAR: <span id="clock">00:00:00</span> &nbsp;|&nbsp; <span id="api-st">SYNCING...</span>
     </div>
-    <div class="mt-4 w-full bg-white/10 rounded-full overflow-hidden">
-        <div id="timerBar" class="timer-bar"></div>
+    <div class="mt-3 w-full bg-white/10 rounded-full overflow-hidden">
+        <div id="timerBar" class="timer-bar" style="width:100%"></div>
+    </div>
+    <!-- Stats bar -->
+    <div id="scan-stats" class="hidden mt-3 flex justify-center gap-4 text-[9px] opacity-50">
+        <span>Scanned: <span id="st-scanned" class="text-[#14f195]">-</span></span>
+        <span>Passed: <span id="st-passed" class="text-[#14f195]">-</span></span>
+        <span>Refresh: <span class="text-[#14f195]">30s</span></span>
     </div>
 </div>
 
-<div id="error-panel">
-    <div class="err-code"  id="err-code-txt">ERR_UNKNOWN</div>
-    <div class="err-detail" id="err-detail-txt">-</div>
-    <div class="err-hint"   id="err-hint-txt"></div>
-    <button id="retry-btn" onclick="manualRetry()">RETRY SEKARANG</button>
+<!-- ═══ ERROR PANEL ═══ -->
+<div id="err-panel">
+    <div class="ec" id="ec"></div>
+    <div class="ed" id="ed"></div>
+    <div class="eh" id="eh"></div>
+    <button id="retry-btn" onclick="manualRetry()">↻ RETRY SEKARANG</button>
 </div>
 
-<div id="scanner-container">
-    <div id="gem-vault" class="hidden space-y-4 mb-8">
-        <div class="text-center text-[#ffd700] text-[10px] font-header mb-2 tracking-[0.3em] uppercase">Locked Signal (Vault)</div>
-        <div id="vault-list" class="space-y-4"></div>
-    </div>
-    <div id="token-list" class="space-y-6"></div>
+<!-- ═══ CONTENT ═══ -->
+<div id="gem-vault" class="hidden space-y-4 mb-6">
+    <div class="text-center text-[#ffd700] text-[9px] font-hdr tracking-[.3em] uppercase mb-2">⚡ Locked Vault (Supreme History)</div>
+    <div id="vault-list" class="space-y-4"></div>
 </div>
+<div id="token-list" class="space-y-5"></div>
 
 <script>
-var CFG = {
-    REFRESH:      30,
-    MIN_LIQ:    5000,
-    RPC:        'https://api.mainnet-beta.solana.com',
-    CHUNK:         5,
-    MAX_RETRY:     3,
-    RETRY_MS:   5000,
-    TIMEOUT_MS: 12000
+// ═══════════════════════════════════════════════
+//  CONFIG — sesuaikan di sini
+// ═══════════════════════════════════════════════
+var C = {
+    REFRESH:      30,      // detik antar scan
+    MIN_LIQ:    8000,      // minimum likuiditas USD
+    MIN_MCAP:  30000,      // minimum market cap USD  ← FIX: filter mcap rendah
+    MIN_VOL:   20000,      // minimum volume 24h USD
+    MAX_H24_DOWN: -15,     // ← FIX: skip token yg drop lebih dari 15% dalam 24j
+    MIN_BUY_RATIO: 0.52,   // minimum rasio buy
+    TIMEOUT_MS: 12000,
+    MAX_RETRY:   3,
+    RETRY_MS:  5000,
+    PROFILES_LIMIT: 25,    // berapa token profile diambil
 };
 
-var timeLeft   = CFG.REFRESH;
+var timeLeft   = C.REFRESH;
 var retryCount = 0;
 var isFetching = false;
 var notified   = {};
 var vault      = {};
 try { vault = JSON.parse(localStorage.getItem('sv10') || '{}'); } catch(e) {}
 
-// ══════════════════════════════════════════════
-// FETCH WITH TIMEOUT — tanpa AbortSignal sama sekali
-// Promise.race aman di semua mobile browser
-// ══════════════════════════════════════════════
-function safeFetch(url, opts) {
-    var fetchP = fetch(url, opts || {});
-    var timeP  = new Promise(function(resolve, reject) {
-        setTimeout(function() {
-            var e = new Error('TIMEOUT');
-            e._code = 'ERR_TIMEOUT';
-            reject(e);
-        }, CFG.TIMEOUT_MS);
+// ═══════════════════════════════════════════════
+//  SAFE FETCH — Promise.race, NO AbortSignal
+// ═══════════════════════════════════════════════
+function sfetch(url, opts) {
+    var fp = fetch(url, opts || {});
+    var tp = new Promise(function(_,rej){
+        setTimeout(function(){ var e=new Error('TIMEOUT'); e._c='ERR_TIMEOUT'; rej(e); }, C.TIMEOUT_MS);
     });
-    return Promise.race([fetchP, timeP]);
+    return Promise.race([fp, tp]);
 }
 
-// ══════════════════════════════════════════════
-// ERROR CLASSIFIER
-// ══════════════════════════════════════════════
-function classify(err, stage) {
-    var m    = String(err && err.message || err).toUpperCase();
-    var http = err && err._httpStatus ? err._httpStatus : 0;
-
-    if (m === 'TIMEOUT' || err._code === 'ERR_TIMEOUT') {
-        return { code:'ERR_TIMEOUT', detail:'['+stage+'] Request melebihi '+CFG.TIMEOUT_MS/1000+'s.', hint:'Koneksi lambat atau server sedang overload. Coba lagi.' };
-    }
-    if (http === 429 || m.indexOf('429') >= 0) {
-        return { code:'ERR_429_RATE_LIMIT', detail:'['+stage+'] Server menolak: terlalu banyak request.', hint:'Naikkan REFRESH ke 60 detik. Public RPC sangat terbatas.' };
-    }
-    if (http === 403) {
-        return { code:'ERR_403_FORBIDDEN', detail:'['+stage+'] Akses ditolak (403).', hint:'Domain GitHub Pages mungkin diblokir API. Coba buka dari file lokal.' };
-    }
-    if (http === 404) {
-        return { code:'ERR_404_NOT_FOUND', detail:'['+stage+'] Endpoint tidak ditemukan (404).', hint:'DexScreener mungkin mengubah URL. Cek dokumentasi API mereka.' };
-    }
-    if (http >= 500) {
-        return { code:'ERR_'+http+'_SERVER', detail:'['+stage+'] Server error internal ('+http+').', hint:'Server sedang down. Tunggu beberapa menit lalu retry.' };
-    }
-    if (m.indexOf('FAILED TO FETCH') >= 0 || m.indexOf('NETWORKERROR') >= 0 || m.indexOf('LOAD FAILED') >= 0 || m.indexOf('NETWORK REQUEST FAILED') >= 0) {
-        return { code:'ERR_NETWORK_CORS', detail:'['+stage+'] Request diblokir jaringan atau CORS.', hint:'Di GitHub Pages: DexScreener harus mengizinkan domain *.github.io. Atau tambahkan "https://corsproxy.io/?" sebelum URL API di dalam kode.' };
-    }
-    if (m.indexOf('JSON') >= 0 || m.indexOf('SYNTAX') >= 0 || m.indexOf('INVALID') >= 0) {
-        return { code:'ERR_INVALID_JSON', detail:'['+stage+'] Server tidak mengembalikan JSON valid.', hint:'Server mungkin mengirim halaman HTML error. Cek Network tab di DevTools.' };
-    }
-    if (m.indexOf('TYPEERROR') >= 0 || m.indexOf('CANNOT READ') >= 0 || m.indexOf('UNDEFINED') >= 0) {
-        return { code:'ERR_PARSE_STRUCTURE', detail:'['+stage+'] Struktur data API berubah.', hint:'DexScreener mungkin mengubah format JSON response-nya.' };
-    }
-    return { code:'ERR_UNKNOWN', detail:'['+stage+'] '+String(err && err.message || err).slice(0,120), hint:'Buka DevTools (F12/Inspect) lalu lihat tab Console untuk detail.' };
-}
-
-// ══════════════════════════════════════════════
-// UI HELPERS
-// ══════════════════════════════════════════════
-function hudShow(txt) {
-    document.getElementById('hud-overlay').style.display = 'flex';
-    document.getElementById('hud-text').innerText = txt;
-    document.getElementById('hud-bar').style.width = '40%';
-}
-function hudHide() {
-    document.getElementById('hud-overlay').style.display = 'none';
-    document.getElementById('hud-bar').style.width = '0%';
-    var a = document.getElementById('hud-err-line');
-    var b = document.getElementById('retry-counter');
-    if(a) a.style.display = 'none';
-    if(b) b.style.display = 'none';
-}
-function showError(info) {
-    document.getElementById('err-code-txt').innerText   = 'ERROR: ' + info.code;
-    document.getElementById('err-detail-txt').innerText = info.detail;
-    document.getElementById('err-hint-txt').innerText   = 'SOLUSI: ' + info.hint;
-    document.getElementById('error-panel').classList.add('show');
-    var el = document.getElementById('hud-err-line');
-    el.innerText = info.code;
-    el.style.display = 'block';
-    console.error('[SENTINEL]', info.code, '|', info.detail);
-}
-function clearError() {
-    document.getElementById('error-panel').classList.remove('show');
-}
-function setStatus(txt, dot) {
-    document.getElementById('api-status').innerText = txt;
-    document.getElementById('status-dot').className = 'w-2 h-2 rounded-full ' + dot;
-}
-
-// ══════════════════════════════════════════════
-// SAFE JSON — baca body dulu, baru parse
-// ══════════════════════════════════════════════
-function safeJson(res, stage) {
+function getJson(res, stage) {
     return res.text().then(function(txt) {
         try { return JSON.parse(txt); }
-        catch(e) {
-            var err = new Error('INVALID JSON at ' + stage + ': ' + txt.slice(0,60));
-            throw err;
-        }
+        catch(e) { var err=new Error('INVALID_JSON:'+txt.slice(0,60)); err._stage=stage; throw err; }
     });
 }
 
-// ══════════════════════════════════════════════
-// AUDIT ONE TOKEN
-// ══════════════════════════════════════════════
-function auditOne(p) {
-    return safeFetch(CFG.RPC, {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ jsonrpc:'2.0', id:1, method:'getTokenLargestAccounts', params:[p.baseToken.address] })
-    }).then(function(res) {
-        return safeJson(res, 'AUDIT_RPC');
-    }).then(function(data) {
-        if (data.error) {
-            console.warn('[AUDIT]', p.baseToken.symbol, data.error.message);
-            return { grade:'?', detail:'RPC Err', color:'text-white/30', isWhaleRisk:false };
-        }
-        if (!data.result || !data.result.value) {
-            return { grade:'?', detail:'No Result', color:'text-white/30', isWhaleRisk:false };
-        }
-        var conc = 0;
-        data.result.value.forEach(function(a){ conc += parseInt(a.amount)||0; });
-        var whale = conc > 1000000000000;
-        return { grade:whale?'C':'A', detail:whale?'High Concentration':'Distributed', color:whale?'text-yellow-500':'text-[#14f195]', isWhaleRisk:whale };
-    }).catch(function(e) {
-        var info = classify(e, 'AUDIT');
-        console.warn('[AUDIT SKIP]', p.baseToken && p.baseToken.symbol, info.code);
-        return { grade:'?', detail:info.code, color:'text-white/20', isWhaleRisk:false };
-    });
+// ═══════════════════════════════════════════════
+//  SMART AUDIT — dari data DexScreener sendiri
+//  TIDAK pakai Solana RPC → tidak pernah RPC Err
+// ═══════════════════════════════════════════════
+function smartAudit(p) {
+    var liq    = p.liquidity && p.liquidity.usd || 0;
+    var mcap   = p.fdv || 0;
+    var vol24  = p.volume && p.volume.h24 || 0;
+    var h24    = p.priceChange && p.priceChange.h24 || 0;
+    var h1     = p.priceChange && p.priceChange.h1  || 0;
+    var tx     = p.txns && p.txns.h24 || { buys:0, sells:0 };
+    var buys   = tx.buys  || 0;
+    var sells  = tx.sells || 0;
+    var total  = buys + sells || 1;
+    var buyRat = buys / total;
+    var ageMs  = Date.now() - (p.pairCreatedAt || Date.now());
+    var ageH   = ageMs / 3600000;
+
+    // Skor risiko (0–100, makin tinggi makin bagus)
+    var score = 0;
+    var flags = [];
+
+    // Likuiditas
+    if      (liq > 100000) { score += 25; }
+    else if (liq >  50000) { score += 18; }
+    else if (liq >  20000) { score += 12; }
+    else if (liq >   8000) { score +=  6; }
+    else                   { score -=  5; flags.push('LOW_LIQ'); }
+
+    // Rasio liq/mcap (idealnya > 5%)
+    var liqRatio = mcap > 0 ? liq / mcap : 0;
+    if      (liqRatio > 0.15) { score += 15; }
+    else if (liqRatio > 0.08) { score += 10; }
+    else if (liqRatio > 0.03) { score +=  5; }
+    else                      { flags.push('LIQ_THIN'); }
+
+    // Volume/Liq ratio (aktivitas)
+    var volLiq = liq > 0 ? vol24 / liq : 0;
+    if      (volLiq > 20) { score += 15; }
+    else if (volLiq > 10) { score += 10; }
+    else if (volLiq >  3) { score +=  5; }
+
+    // Buy pressure
+    if      (buyRat > 0.70) { score += 20; }
+    else if (buyRat > 0.60) { score += 12; }
+    else if (buyRat > 0.52) { score +=  6; }
+    else                    { score -=  5; flags.push('SELL_PRESSURE'); }
+
+    // Trend
+    if (h24 > 50)  { score += 10; }
+    else if (h24 > 10) { score +=  6; }
+    else if (h24 < -20) { score -= 10; flags.push('DOWNTREND'); }
+
+    // Usia pair (terlalu baru = lebih risky)
+    if (ageH < 1)        { flags.push('VERY_NEW'); score -= 5; }
+    else if (ageH < 6)   { score += 5; }  // sweet spot: baru tapi ada history
+    else if (ageH > 168) { score -= 5; flags.push('OLD'); }
+
+    // Txn count
+    if      (buys > 500) { score += 10; }
+    else if (buys > 100) { score +=  6; }
+    else if (buys <  20) { flags.push('LOW_TX'); score -= 5; }
+
+    score = Math.max(0, Math.min(100, score));
+
+    var grade, color, detail, isWhale;
+    var whaleFactor = liqRatio < 0.02 && mcap > 100000;
+    isWhale = whaleFactor;
+    if (isWhale) flags.push('WHALE_RISK');
+
+    if      (score >= 70) { grade='A'; color='text-[#14f195]'; detail = flags.length ? flags[0] : 'Strong Fundamentals'; }
+    else if (score >= 50) { grade='B'; color='text-[#60a5fa]'; detail = flags.length ? flags[0] : 'Good Setup'; }
+    else if (score >= 35) { grade='C'; color='text-[#fbbf24]'; detail = flags.length ? flags[0] : 'Moderate Risk'; }
+    else if (score >= 20) { grade='D'; color='text-[#f87171]'; detail = flags.length ? flags[0] : 'High Risk'; }
+    else                  { grade='F'; color='text-[#7f1d1d]'; detail = 'Avoid'; }
+
+    return { grade:grade, color:color, detail:detail, isWhaleRisk:isWhale, score:score, flags:flags };
 }
 
-// Chunked audit — max 5 paralel per batch, jeda 600ms antar batch
-function auditAll(pairs) {
-    var results = [];
-    var i = 0;
-    function nextChunk() {
-        if (i >= pairs.length) return Promise.resolve(results);
-        var batch = pairs.slice(i, i + CFG.CHUNK);
-        i += CFG.CHUNK;
-        return Promise.all(batch.map(auditOne)).then(function(res) {
-            results = results.concat(res);
-            if (i < pairs.length) {
-                return new Promise(function(r){ setTimeout(r, 600); }).then(nextChunk);
-            }
-            return results;
-        });
-    }
-    return nextChunk();
+// ═══════════════════════════════════════════════
+//  VALIDATE TOKEN — pastikan data lengkap & valid
+// ═══════════════════════════════════════════════
+function isValidToken(p) {
+    // FIX: filter token tanpa symbol atau symbol invalid
+    var sym = p.baseToken && p.baseToken.symbol;
+    if (!sym || sym === 'NA' || sym === 'N/A' || sym.length < 2) return false;
+
+    // FIX: filter jika data kritis hilang
+    if (!p.baseToken || !p.baseToken.address) return false;
+    if (!p.liquidity || !p.liquidity.usd) return false;
+
+    var liq   = p.liquidity.usd;
+    var mcap  = p.fdv || 0;
+    var vol24 = p.volume && p.volume.h24 || 0;
+    var h24   = p.priceChange && p.priceChange.h24 || 0;
+
+    // FIX: filter berdasarkan threshold
+    if (liq   < C.MIN_LIQ)          return false;
+    if (mcap  < C.MIN_MCAP)         return false;
+    if (vol24 < C.MIN_VOL)          return false;
+
+    // FIX: filter token yang sudah drop terlalu dalam (tidak cocok tujuan profit 50%)
+    if (h24 < C.MAX_H24_DOWN)       return false;
+
+    return true;
 }
 
-// ══════════════════════════════════════════════
-// MAIN FETCH
-// ══════════════════════════════════════════════
+// ═══════════════════════════════════════════════
+//  CLASSIFY ERROR
+// ═══════════════════════════════════════════════
+function classify(err, stage) {
+    var m = String(err && err.message || err).toUpperCase();
+    var h = err && err._http || 0;
+    var s = stage || err._stage || '?';
+    if (err._c === 'ERR_TIMEOUT' || m === 'TIMEOUT')
+        return { c:'ERR_TIMEOUT', d:'['+s+'] Request timeout '+C.TIMEOUT_MS/1000+'s.', h:'Koneksi lambat / server overload. Retry otomatis.' };
+    if (h===429||m.includes('429'))
+        return { c:'ERR_429_RATE_LIMIT', d:'['+s+'] Server rate limit.', h:'Naikkan REFRESH ke 60s. DexScreener API ada batas request.' };
+    if (h===403)
+        return { c:'ERR_403_FORBIDDEN', d:'['+s+'] Akses ditolak (403).', h:'Domain GitHub Pages mungkin diblokir. Coba buka dari file lokal.' };
+    if (h===404)
+        return { c:'ERR_404_NOT_FOUND', d:'['+s+'] Endpoint tidak ada (404).', h:'DexScreener mengubah URL API. Perlu update endpoint.' };
+    if (h>=500)
+        return { c:'ERR_'+h+'_SERVER', d:'['+s+'] Server error ('+h+').', h:'Server DexScreener sedang down. Tunggu beberapa menit.' };
+    if (m.includes('FAILED TO FETCH')||m.includes('NETWORKERROR')||m.includes('LOAD FAILED')||m.includes('NETWORK REQUEST FAILED'))
+        return { c:'ERR_NETWORK/CORS', d:'['+s+'] Request diblokir jaringan/CORS.', h:'Di GitHub Pages: tambahkan "https://corsproxy.io/?" sebelum URL DexScreener.' };
+    if (m.includes('INVALID_JSON')||m.includes('SYNTAX'))
+        return { c:'ERR_INVALID_JSON', d:'['+s+'] Response bukan JSON valid.', h:'Server mengirim halaman error HTML. Lihat Network tab DevTools.' };
+    return { c:'ERR_UNKNOWN', d:'['+s+'] '+String(err&&err.message||err).slice(0,100), h:'Buka DevTools → Console untuk detail error.' };
+}
+
+// ═══════════════════════════════════════════════
+//  UI HELPERS
+// ═══════════════════════════════════════════════
+function hudOn(txt)  { var h=document.getElementById('hud'); h.style.display='flex'; document.getElementById('hud-txt').innerText=txt; document.getElementById('hud-bar').style.width='45%'; }
+function hudOff()    { document.getElementById('hud').style.display='none'; document.getElementById('hud-bar').style.width='0%'; $$('hud-sub').style.display='none'; $$('hud-retry').style.display='none'; }
+function hudSub(t)   { var el=$$('hud-sub'); el.innerText=t; el.style.display='block'; }
+function hudRetry(n) { var el=$$('hud-retry'); el.innerText='AUTO-RETRY '+n+'/'+C.MAX_RETRY+'...'; el.style.display='block'; }
+function $$(id)      { return document.getElementById(id); }
+function setDot(cls) { $$('dot').className='w-2 h-2 rounded-full '+cls; }
+
+function showErr(info) {
+    $$('ec').innerText = 'ERROR: ' + info.c;
+    $$('ed').innerText = info.d;
+    $$('eh').innerText = 'SOLUSI: ' + info.h;
+    $$('err-panel').classList.add('on');
+    hudSub(info.c);
+    console.error('[SENTINEL]', info.c, '|', info.d);
+}
+function clearErr() { $$('err-panel').classList.remove('on'); }
+function setSt(txt, dot) { $$('api-st').innerText=txt; setDot(dot); }
+
+// ═══════════════════════════════════════════════
+//  MAIN FETCH
+// ═══════════════════════════════════════════════
 function fetchTokens() {
     if (isFetching) return;
     isFetching = true;
 
-    hudShow('SCANNING CORE...');
-    setStatus('SCANNING...', 'bg-yellow-400 animate-pulse');
-    clearError();
+    hudOn('SCANNING CORE...');
+    setSt('SCANNING...', 'bg-yellow-400 animate-pulse');
+    clearErr();
 
-    safeFetch('https://api.dexscreener.com/token-profiles/latest/v1')
+    // Step 1: profiles
+    sfetch('https://api.dexscreener.com/token-profiles/latest/v1')
     .then(function(res) {
-        if (!res.ok) {
-            var e = new Error('HTTP '+res.status); e._httpStatus = res.status; e._stage = 'PROFILE_FETCH'; throw e;
-        }
-        return safeJson(res, 'PROFILE_PARSE');
+        if (!res.ok) { var e=new Error('HTTP '+res.status); e._http=res.status; e._stage='PROFILE_FETCH'; throw e; }
+        return getJson(res, 'PROFILE_PARSE');
     })
     .then(function(profiles) {
-        if (!Array.isArray(profiles)) {
-            var e = new Error('TYPEERROR profiles not array'); e._stage = 'PROFILE_PARSE'; throw e;
-        }
-        var sol = profiles.filter(function(p){ return p.chainId === 'solana'; }).slice(0, 20);
-        if (sol.length === 0) { render([]); return null; }
+        if (!Array.isArray(profiles)) { var e=new Error('TYPEERROR'); e._stage='PROFILE_PARSE'; throw e; }
+        var sol = profiles.filter(function(p){ return p.chainId==='solana'; }).slice(0, C.PROFILES_LIMIT);
+        if (!sol.length) { render([]); return null; }
         var addrs = sol.map(function(p){ return p.tokenAddress; }).join(',');
-        return safeFetch('https://api.dexscreener.com/latest/dex/tokens/' + addrs)
+        return sfetch('https://api.dexscreener.com/latest/dex/tokens/'+addrs)
             .then(function(res2) {
-                if (!res2.ok) {
-                    var e = new Error('HTTP '+res2.status); e._httpStatus = res2.status; e._stage = 'PAIRS_FETCH'; throw e;
-                }
-                return safeJson(res2, 'PAIRS_PARSE');
+                if (!res2.ok) { var e=new Error('HTTP '+res2.status); e._http=res2.status; e._stage='PAIRS_FETCH'; throw e; }
+                return getJson(res2, 'PAIRS_PARSE');
             });
     })
-    .then(function(pairsData) {
-        if (!pairsData) return; // kosong
-        var pairs = (pairsData.pairs || []).filter(function(p){ return p.liquidity && p.liquidity.usd > CFG.MIN_LIQ; });
-        return auditAll(pairs).then(function(audits) {
-            var processed = pairs.map(function(p, idx) {
-                var audit = audits[idx] || { grade:'?', detail:'?', color:'text-white/20', isWhaleRisk:false };
-                var tx       = p.txns && p.txns.h24 || { buys:0, sells:0 };
-                var buyRatio = tx.buys / (tx.buys + tx.sells || 1);
-                var m5       = p.priceChange && p.priceChange.m5 || 0;
-                var signal   = 'NONE';
-                if (m5 > 3  && buyRatio > 0.50) signal = 'EARLY';
-                if (m5 > 15 && buyRatio > 0.70 && audit.grade === 'A') signal = 'SUPREME';
-                var liq      = p.liquidity && p.liquidity.usd || 1;
-                var vol      = p.volume && p.volume.h24 || 0;
-                var omni     = (buyRatio * 50) + (m5 * 2);
-                var rr       = (audit.grade==='A' && signal==='EARLY') ? 'High Reward' : (audit.isWhaleRisk ? 'High Risk' : 'Moderate');
-                return { p:p, signal:signal, audit:audit, buyRatio:buyRatio, m5:m5, volatility:vol/liq, riskReward:rr, omni:omni };
-            });
-            var genius = processed.filter(function(x) {
-                if (x.audit.grade === 'F') return false;
-                return x.signal==='EARLY' || x.signal==='SUPREME' || (x.buyRatio>0.55 && x.m5>2) || (x.omni>30 && x.buyRatio>0.55);
-            }).sort(function(a,b){ return b.omni - a.omni; });
+    .then(function(data) {
+        if (!data) return;
 
-            genius.forEach(function(x) {
-                var addr = x.p.baseToken && x.p.baseToken.address;
-                if (addr && !notified[addr]) {
-                    if (x.signal==='SUPREME' || x.signal==='EARLY') pushNotif(x.p.baseToken.symbol, x.signal);
-                    notified[addr] = 1;
-                }
-            });
-            render(genius);
+        var raw = (data.pairs || []);
+
+        // ── FIX: Filter valid tokens dulu ──
+        var valid = raw.filter(isValidToken);
+
+        // Update stats
+        $$('st-scanned').innerText = raw.length;
+        $$('st-passed').innerText  = valid.length;
+        $$('scan-stats').classList.remove('hidden');
+
+        // ── Smart audit (no RPC, instant) ──
+        var processed = valid.map(function(p) {
+            var audit    = smartAudit(p);
+            var tx       = p.txns && p.txns.h24 || { buys:0, sells:0 };
+            var total    = (tx.buys||0) + (tx.sells||0) || 1;
+            var buyRatio = (tx.buys||0) / total;
+            var m5       = p.priceChange && p.priceChange.m5  || 0;
+            var h1       = p.priceChange && p.priceChange.h1  || 0;
+            var h24      = p.priceChange && p.priceChange.h24 || 0;
+            var liq      = p.liquidity && p.liquidity.usd || 1;
+            var vol24    = p.volume && p.volume.h24 || 0;
+            var volatility = vol24 / liq;
+
+            // ── Signal logic ──
+            var signal = 'NONE';
+            // EARLY: momentum 5m positif, buy dominan
+            if (m5 > 3 && buyRatio > 0.53) signal = 'EARLY';
+            // SUPREME: semua indikator bagus + audit A/B
+            if (m5 > 12 && buyRatio > 0.68 && (audit.grade==='A'||audit.grade==='B') && h24 > 0) signal = 'SUPREME';
+
+            // Risk/Reward label
+            var rr;
+            if (signal==='SUPREME' && audit.grade==='A') rr = 'Very High Reward';
+            else if (signal==='EARLY' && audit.grade==='A') rr = 'High Reward';
+            else if (audit.isWhaleRisk) rr = 'High Risk';
+            else if (audit.grade==='D'||audit.grade==='F') rr = 'Very High Risk';
+            else rr = 'Moderate';
+
+            // Omni score
+            var omni = (buyRatio*40) + (m5*2.5) + (audit.score*0.3) + (h24>0?h24*0.1:0);
+
+            return { p:p, signal:signal, audit:audit, buyRatio:buyRatio, m5:m5, h1:h1, h24:h24, volatility:volatility, riskReward:rr, omni:omni };
         });
-    })
-    .then(function() {
-        setStatus('ACTIVE', 'bg-[#14f195] animate-pulse');
-        hudHide();
+
+        // ── Filter untuk list utama ──
+        var genius = processed.filter(function(x) {
+            if (x.audit.grade==='F') return false;          // skip audit F
+            if (x.audit.grade==='D' && x.signal==='NONE') return false;
+            return (
+                x.signal==='SUPREME' ||
+                x.signal==='EARLY'   ||
+                (x.buyRatio > C.MIN_BUY_RATIO && x.m5 > 2) ||
+                (x.omni > 28 && x.buyRatio > 0.53)
+            );
+        }).sort(function(a,b){ return b.omni - a.omni; });
+
+        // Notifikasi
+        genius.forEach(function(x) {
+            var addr = x.p.baseToken && x.p.baseToken.address;
+            if (addr && !notified[addr]) {
+                if (x.signal==='SUPREME'||x.signal==='EARLY') pushNotif(x.p.baseToken.symbol, x.signal);
+                notified[addr] = 1;
+            }
+        });
+
+        render(genius);
+        setSt('ACTIVE — '+genius.length+' GEM', 'bg-[#14f195] animate-pulse');
+        hudOff();
         retryCount = 0;
-        isFetching = false;
     })
+    .then(function() { isFetching=false; })
     .catch(function(err) {
         isFetching = false;
-        var stage = err && err._stage || 'UNKNOWN';
-        var info  = classify(err, stage);
-        showError(info);
+        var info = classify(err, err._stage||'FETCH');
+        showErr(info);
         retryCount++;
-        setStatus('ERROR ('+retryCount+'x)', 'bg-red-500');
-        hudShow('RECONNECTING...');
-
-        if (retryCount <= CFG.MAX_RETRY) {
-            var rc = document.getElementById('retry-counter');
-            rc.innerText = 'AUTO-RETRY '+retryCount+'/'+CFG.MAX_RETRY+'...';
-            rc.style.display = 'block';
-            setTimeout(function() { fetchTokens(); }, CFG.RETRY_MS);
+        setSt('ERROR ('+retryCount+'x)', 'bg-red-500');
+        hudOn('RECONNECTING...');
+        if (retryCount <= C.MAX_RETRY) {
+            hudRetry(retryCount);
+            setTimeout(fetchTokens, C.RETRY_MS);
         } else {
-            hudHide(); // tutup HUD, tampilkan error panel
+            hudOff();
         }
     });
 }
 
-function manualRetry() {
-    retryCount = 0;
-    timeLeft   = 1;
-    fetchTokens();
-}
+function manualRetry() { retryCount=0; timeLeft=1; fetchTokens(); }
 
-// ══════════════════════════════════════════════
-// RENDER
-// ══════════════════════════════════════════════
+// ═══════════════════════════════════════════════
+//  RENDER
+// ═══════════════════════════════════════════════
 function render(genius) {
-    var container    = document.getElementById('token-list');
-    var vaultList    = document.getElementById('vault-list');
-    var vaultSection = document.getElementById('gem-vault');
+    var cont  = $$('token-list');
+    var vlist = $$('vault-list');
+    var vsec  = $$('gem-vault');
 
     genius.forEach(function(x) {
-        if (x.signal==='SUPREME' && x.p.baseToken && x.p.baseToken.address) {
+        if (x.signal==='SUPREME' && x.p.baseToken && x.p.baseToken.address)
             vault[x.p.baseToken.address] = { symbol:x.p.baseToken.symbol, time:Date.now() };
-        }
     });
     try { localStorage.setItem('sv10', JSON.stringify(vault)); } catch(e) {}
 
-    var main  = genius.filter(function(x){ return !vault[x.p.baseToken && x.p.baseToken.address]; });
-    var inVlt = genius.filter(function(x){ return  vault[x.p.baseToken && x.p.baseToken.address]; });
+    var main = genius.filter(function(x){ return !vault[x.p.baseToken&&x.p.baseToken.address]; });
+    var vlt  = genius.filter(function(x){ return  vault[x.p.baseToken&&x.p.baseToken.address]; });
 
-    container.innerHTML = main.length === 0
-        ? '<div class="text-center p-12 opacity-40"><div class="w-12 h-12 border-4 border-[#14f195] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div><p class="font-header text-xs tracking-widest text-[#14f195]">SCANNING BLOCKCHAIN...</p><p class="text-[10px] mt-2">Belum ada token memenuhi kriteria.</p></div>'
-        : main.map(function(x,i){ return card(x,false,i+1); }).join('');
+    cont.innerHTML = main.length===0
+        ? '<div class="text-center p-12 opacity-30"><div class="w-10 h-10 border-4 border-[#14f195] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div><p class="font-hdr text-xs tracking-widest text-[#14f195]">SCANNING...</p><p class="text-[10px] mt-2 opacity-70">Belum ada token yang lolos filter. Filter aktif: Liq &gt;$8K, Mcap &gt;$30K, Vol &gt;$20K, H24 &gt;-15%</p></div>'
+        : main.map(function(x,i){ return mkCard(x,false,i+1); }).join('');
 
-    if (inVlt.length > 0) {
-        vaultSection.classList.remove('hidden');
-        vaultList.innerHTML = inVlt.map(function(x,i){ return card(x,true,i+1); }).join('');
-    } else {
-        vaultSection.classList.add('hidden');
-    }
+    if (vlt.length>0) {
+        vsec.classList.remove('hidden');
+        vlist.innerHTML = vlt.map(function(x,i){ return mkCard(x,true,i+1); }).join('');
+    } else { vsec.classList.add('hidden'); }
 }
 
-function timeAgo(t) {
-    var s = Math.floor((Date.now()-t)/1000);
-    if (s < 60)   return s+'s ago';
-    if (s < 3600) return Math.floor(s/60)+'m ago';
+// ═══════════════════════════════════════════════
+//  CARD BUILDER
+// ═══════════════════════════════════════════════
+function tAgo(t) {
+    var s=Math.floor((Date.now()-t)/1000);
+    if(s<60)   return s+'s ago';
+    if(s<3600) return Math.floor(s/60)+'m ago';
     return Math.floor(s/3600)+'h ago';
 }
-function fmtK(n) { return '$'+(n/1000).toFixed(0)+'K'; }
+function fK(n) {
+    if (!n||isNaN(n)) return '$0';
+    if (n>=1000000) return '$'+(n/1000000).toFixed(1)+'M';
+    if (n>=1000)    return '$'+(n/1000).toFixed(0)+'K';
+    return '$'+n.toFixed(0);
+}
+function fPrice(n) {
+    if (!n||isNaN(n)) return '$0';
+    if (n>=1)      return '$'+n.toFixed(4);
+    if (n>=0.001)  return '$'+n.toFixed(6);
+    return '$'+n.toExponential(2);
+}
 
-function card(x, isVault, rank) {
+function mkCard(x, isVault, rank) {
     var p      = x.p;
-    var liq    = p.liquidity && p.liquidity.usd || 0;
-    var mcap   = p.fdv || 0;
-    var change = p.priceChange && p.priceChange.h24 || 0;
-    var sell   = (1 - x.buyRatio) * 100;
-    var sym    = p.baseToken && p.baseToken.symbol || '???';
-    var addr   = p.baseToken && p.baseToken.address || '';
-    var url    = p.url || '#';
+    var liq    = p.liquidity&&p.liquidity.usd||0;
+    var mcap   = p.fdv||0;
+    var vol24  = p.volume&&p.volume.h24||0;
+    var price  = p.priceUsd ? parseFloat(p.priceUsd) : 0;
+    var h24    = x.h24;
+    var sym    = (p.baseToken&&p.baseToken.symbol)||'???';
+    var name   = (p.baseToken&&p.baseToken.name)||sym;
+    var addr   = (p.baseToken&&p.baseToken.address)||'';
+    var url    = p.url||'#';
+    var dex    = (p.dexId||'').toUpperCase()||'DEX';
+    var sell   = (1-x.buyRatio)*100;
+    var ageMs  = Date.now()-(p.pairCreatedAt||Date.now());
+    var ageH   = ageMs/3600000;
+    var isNew  = ageH < 6;
 
-    var rClass='', rGlow='', rBadge='';
-    if (rank===1){ rClass='border-yellow-400'; rGlow='shadow-[0_0_25px_rgba(250,204,21,0.4)]'; rBadge='<span class="badge-status bg-rank-1">ELITE GEM</span>'; }
-    else if(rank===2){ rClass='border-slate-300'; rGlow='shadow-[0_0_20px_rgba(203,213,225,0.3)]'; rBadge='<span class="badge-status bg-rank-2">PRIME GEM</span>'; }
-    else if(rank===3){ rClass='border-orange-600'; rGlow='shadow-[0_0_15px_rgba(154,52,18,0.3)]'; rBadge='<span class="badge-status bg-rank-3">ALPHA GEM</span>'; }
+    // Rank styling
+    var rCls='', rBadge='';
+    if(rank===1){ rCls='rank-1'; rBadge='<span class="badge b-gold">🏆 ELITE GEM</span>'; }
+    else if(rank===2){ rCls='rank-2'; rBadge='<span class="badge b-silver">🥈 PRIME GEM</span>'; }
+    else if(rank===3){ rCls='rank-3'; rBadge='<span class="badge b-bronze">🥉 ALPHA GEM</span>'; }
 
-    var badges = [];
-    if (rank<=3)          badges.push(rBadge);
-    if (x.m5 > 10)        badges.push('<span class="badge-status bg-surging">PUMPING</span>');
-    if (x.audit.isWhaleRisk) badges.push('<span class="badge-status bg-whale">WHALE</span>');
-    if (x.signal==='EARLY')  badges.push('<span class="badge-status bg-early">EARLY</span>');
+    // Badges
+    var badges=[]; if(rank<=3) badges.push(rBadge);
+    if(isNew)              badges.push('<span class="badge b-new">🆕 NEW</span>');
+    if(x.m5>10)            badges.push('<span class="badge b-pump">⚡ PUMPING</span>');
+    if(x.audit.isWhaleRisk)badges.push('<span class="badge b-whale">🐋 WHALE</span>');
+    if(x.signal==='EARLY') badges.push('<span class="badge b-early">EARLY</span>');
+    if(x.h24>100)          badges.push('<span class="badge b-safe">🚀 +'+x.h24.toFixed(0)+'%</span>');
+    if(x.audit.grade==='A')badges.push('<span class="badge b-safe">SAFE</span>');
+    if(x.audit.grade==='D'||x.audit.grade==='F') badges.push('<span class="badge b-danger">HIGH RISK</span>');
 
-    var cc = change >= 0 ? 'text-[#14f195]' : 'text-[#ff4b4b]';
-    var cs = (change>=0?'+':'')+change+'%';
+    // Score bar color
+    var barClr = x.audit.score>=70?'bg-[#14f195]':x.audit.score>=50?'bg-[#60a5fa]':x.audit.score>=35?'bg-[#fbbf24]':'bg-[#ef4444]';
 
-    return '<div class="'+(isVault?'vault-card':'ultimate-card')+' '+rClass+' '+rGlow+' p-6">'
+    // Change color
+    var h24Clr = h24>=0?'text-[#14f195]':'text-[#ff4b4b]';
+    var h24Str = (h24>=0?'+':'')+h24.toFixed(2)+'%';
+    var m5Clr  = x.m5>=0?'text-[#14f195]':'text-[#ff4b4b]';
+    var m5Str  = (x.m5>=0?'+':'')+x.m5.toFixed(1)+'%';
+    var h1Clr  = x.h1>=0?'text-[#14f195]':'text-[#ff4b4b]';
+    var h1Str  = (x.h1>=0?'+':'')+x.h1.toFixed(1)+'%';
+
+    // Grade ring class
+    var gradeRing = 'grade-'+x.audit.grade;
+
+    var cardCls = (isVault?'vault-card':'gem-card')+' '+rCls;
+
+    return '<div class="'+cardCls+' p-5 mb-1">'
+
+        // ── Header ──
         +'<div class="flex justify-between items-start mb-3">'
-            +'<div>'
-                +'<div class="flex items-center gap-2">'
-                    +'<span class="font-header text-[#14f195] text-sm">#'+rank+'</span>'
-                    +'<h2 class="font-header text-xl uppercase">'+sym+'</h2>'
-                    +(x.signal==='SUPREME'?'<span class="buy-signal">SUPREME BUY</span>':'')
+            +'<div style="max-width:65%">'
+                +'<div class="flex items-center gap-2 mb-1">'
+                    +'<span class="font-hdr text-[#14f195] text-[11px] opacity-60">#'+rank+'</span>'
+                    +'<h2 class="font-hdr text-[20px] uppercase tracking-tight leading-none">'+sym+'</h2>'
+                    +(x.signal==='SUPREME'?'<span class="supreme-badge">🔥 SUPREME</span>':'')
                 +'</div>'
-                +'<div class="mt-2 flex flex-wrap gap-1">'+badges.join('')+'</div>'
-                +'<p class="text-[9px] text-white/40 mt-2">Age: <span class="text-[#14f195]">'+timeAgo(p.pairCreatedAt)+'</span></p>'
+                +'<p class="text-[9px] text-white/30 mt-0.5">'+name+' · <span class="text-white/40">'+dex+'</span></p>'
+                +'<p class="text-[9px] text-white/30">Age: <span class="text-[#14f195]">'+tAgo(p.pairCreatedAt)+'</span></p>'
             +'</div>'
-            +'<button onclick="try{navigator.clipboard.writeText(\''+addr+'\')}catch(e){}" class="bg-white text-black text-[10px] font-bold px-3 py-2 rounded-full uppercase">Copy CA</button>'
+            +'<button onclick="try{navigator.clipboard.writeText(\''+addr+'\')}catch(e){}" '
+                +'class="bg-white text-black text-[9px] font-bold px-3 py-2 rounded-full uppercase tracking-wide flex-shrink-0">COPY CA</button>'
         +'</div>'
-        +'<div class="grid grid-cols-2 gap-3 mb-4 text-[10px]">'
-            +'<div class="glass-panel rounded-2xl p-3 border border-white/5">'
-                +'<p class="text-[8px] text-white/40 font-header mb-2 tracking-widest uppercase">Security Audit</p>'
-                +'<div class="flex justify-between items-center"><span class="text-white/60">Grade</span><span class="'+x.audit.color+' font-bold text-lg">'+x.audit.grade+'</span></div>'
-                +'<div class="text-center text-[9px] '+x.audit.color+' font-medium mt-1">'+x.audit.detail+'</div>'
-            +'</div>'
-            +'<div class="glass-panel rounded-2xl p-3 border border-white/5 text-center flex flex-col justify-center">'
-                +'<p class="text-[8px] text-white/40 font-header mb-1 tracking-widest uppercase">Risk/Reward</p>'
-                +'<div class="text-sm font-bold '+(x.audit.isWhaleRisk?'text-yellow-500':'text-[#14f195]')+'">'+x.riskReward+'</div>'
+
+        // ── Badges ──
+        +'<div class="flex flex-wrap gap-1 mb-4">'+badges.join('')+'</div>'
+
+        // ── Price + Change row ──
+        +'<div class="gpanel mb-3">'
+            +'<div class="flex justify-between items-center">'
+                +'<div>'
+                    +'<p class="text-[8px] text-white/30 font-hdr uppercase tracking-widest mb-1">Price</p>'
+                    +'<p class="font-bold text-[15px] text-white">'+fPrice(price)+'</p>'
+                +'</div>'
+                +'<div class="text-right">'
+                    +'<div class="flex gap-3 text-[10px] font-bold">'
+                        +'<div class="text-center"><p class="text-[7px] text-white/30 mb-0.5">5M</p><span class="'+m5Clr+'">'+m5Str+'</span></div>'
+                        +'<div class="text-center"><p class="text-[7px] text-white/30 mb-0.5">1H</p><span class="'+h1Clr+'">'+h1Str+'</span></div>'
+                        +'<div class="text-center"><p class="text-[7px] text-white/30 mb-0.5">24H</p><span class="'+h24Clr+' text-[13px]">'+h24Str+'</span></div>'
+                    +'</div>'
+                +'</div>'
             +'</div>'
         +'</div>'
-        +'<div class="grid grid-cols-2 gap-3 mb-4 text-[10px]">'
-            +'<div class="glass-panel rounded-2xl p-3 border border-white/5">'
-                +'<p class="text-[8px] text-white/40 font-header mb-1 tracking-widest uppercase">Volatility</p>'
-                +'<div class="flex justify-between items-center"><span class="text-white/60">Index</span><span class="font-bold text-[#14f195]">'+x.volatility.toFixed(1)+'x</span></div>'
+
+        // ── Audit + Risk/Reward ──
+        +'<div class="grid grid-cols-2 gap-3 mb-3">'
+            +'<div class="gpanel">'
+                +'<p class="text-[7px] text-white/30 font-hdr uppercase tracking-widest mb-2">Security Audit</p>'
+                +'<div class="flex items-center gap-3">'
+                    +'<div class="grade-ring '+gradeRing+'">'+x.audit.grade+'</div>'
+                    +'<div>'
+                        +'<p class="text-[10px] font-bold '+x.audit.color+'">'+x.audit.detail+'</p>'
+                        +'<div class="score-bar-wrap mt-1" style="width:80px">'
+                            +'<div class="score-bar-fill '+barClr+'" style="width:'+x.audit.score+'%"></div>'
+                        +'</div>'
+                        +'<p class="text-[8px] text-white/30 mt-0.5">Score: '+x.audit.score+'/100</p>'
+                    +'</div>'
+                +'</div>'
             +'</div>'
-            +'<div class="glass-panel rounded-2xl p-3 border border-white/5 text-center flex flex-col justify-center">'
-                +'<p class="text-[8px] text-white/40 font-header mb-1 tracking-widest uppercase">24h Change</p>'
-                +'<div class="text-lg font-bold '+cc+'">'+cs+'</div>'
+            +'<div class="gpanel flex flex-col justify-center text-center">'
+                +'<p class="text-[7px] text-white/30 font-hdr uppercase tracking-widest mb-2">Risk / Reward</p>'
+                +'<p class="font-bold text-[12px] '+(x.audit.isWhaleRisk?'text-yellow-400':'text-[#14f195]')+'">'+x.riskReward+'</p>'
+                +'<p class="text-[8px] text-white/20 mt-1">Omni Score: '+x.omni.toFixed(0)+'</p>'
             +'</div>'
         +'</div>'
-        +'<div class="glass-panel rounded-2xl p-3 border border-white/5 mb-6">'
-            +'<div class="flex justify-between text-[10px] mb-2">'
-                +'<span class="text-white/40 uppercase font-header text-[8px]">Order Flow</span>'
+
+        // ── Order Flow ──
+        +'<div class="gpanel mb-3">'
+            +'<div class="flex justify-between text-[9px] mb-2">'
+                +'<span class="text-white/30 font-hdr text-[7px] uppercase tracking-widest">Order Flow 24h</span>'
                 +'<div class="flex gap-3">'
-                    +'<span class="text-[#14f195] font-bold text-[9px]">Buy: '+(x.buyRatio*100).toFixed(0)+'%</span>'
-                    +'<span class="text-[#ff4b4b] font-bold text-[9px]">Sell: '+sell.toFixed(0)+'%</span>'
+                    +'<span class="text-[#14f195] font-bold">Buy '+((x.buyRatio*100).toFixed(0))+'%</span>'
+                    +'<span class="text-[#ff4b4b] font-bold">Sell '+(sell.toFixed(0))+'%</span>'
                 +'</div>'
             +'</div>'
-            +'<div class="h-2 bg-white/10 rounded-full overflow-hidden flex p-0.5">'
-                +'<div class="h-full bg-[#14f195] rounded-full shadow-[0_0_8px_#14f195] transition-all duration-500" style="width:'+(x.buyRatio*100)+'%"></div>'
-                +'<div class="h-full bg-[#ff4b4b] rounded-full" style="width:'+sell+'%"></div>'
+            +'<div class="score-bar-wrap" style="height:8px">'
+                +'<div style="height:100%;display:flex">'
+                    +'<div style="width:'+(x.buyRatio*100)+'%;background:#14f195;border-radius:99px 0 0 99px;box-shadow:0 0 8px #14f195;transition:width .6s"></div>'
+                    +'<div style="width:'+sell+'%;background:#ff4b4b;border-radius:0 99px 99px 0;transition:width .6s"></div>'
+                +'</div>'
             +'</div>'
-            +'<div class="mt-3 pt-2 border-t border-white/10 text-center">'
-                +'<p class="text-[8px] text-[#14f195] font-bold uppercase tracking-tighter italic">Entry Early → Target Profit 50%+</p>'
-            +'</div>'
         +'</div>'
-        +'<div class="grid grid-cols-3 gap-2 text-center mb-6">'
-            +'<div class="bg-white/5 p-2 rounded-xl"><span class="text-[8px] text-white/30 font-header">Liq</span><div class="text-[#14f195] font-bold text-[12px]">'+fmtK(liq)+'</div></div>'
-            +'<div class="bg-white/5 p-2 rounded-xl"><span class="text-[8px] text-white/30 font-header">Mcap</span><div class="font-bold text-[12px]">'+fmtK(mcap)+'</div></div>'
-            +'<div class="bg-white/5 p-2 rounded-xl"><span class="text-[8px] text-white/30 font-header">Vol 24h</span><div class="text-white/70 font-bold text-[12px]">'+fmtK(p.volume&&p.volume.h24||0)+'</div></div>'
+
+        // ── Stats: Liq, Mcap, Vol, Volatility ──
+        +'<div class="grid grid-cols-4 gap-2 text-center mb-4">'
+            +'<div class="stat-box"><p class="text-[7px] text-white/25 font-hdr mb-1">LIQ</p><p class="text-[#14f195] font-bold text-[11px]">'+fK(liq)+'</p></div>'
+            +'<div class="stat-box"><p class="text-[7px] text-white/25 font-hdr mb-1">MCAP</p><p class="font-bold text-[11px]">'+fK(mcap)+'</p></div>'
+            +'<div class="stat-box"><p class="text-[7px] text-white/25 font-hdr mb-1">VOL</p><p class="text-white/70 font-bold text-[11px]">'+fK(vol24)+'</p></div>'
+            +'<div class="stat-box"><p class="text-[7px] text-white/25 font-hdr mb-1">V/L</p><p class="text-white/70 font-bold text-[11px]">'+x.volatility.toFixed(1)+'x</p></div>'
         +'</div>'
-        +'<div class="flex gap-3 w-full">'
-            +'<a href="'+url+'" target="_blank" class="flex-1 bg-[#14f195] text-black text-[11px] font-bold py-4 rounded-2xl text-center uppercase tracking-widest">Open Chart</a>'
-            +'<a href="https://rugcheck.xyz/tokens/'+addr+'" target="_blank" class="flex-1 bg-white/10 border border-white/10 text-white text-[11px] font-bold py-4 rounded-2xl text-center uppercase tracking-widest">RugCheck</a>'
+
+        // ── Target tagline ──
+        +'<p class="text-[8px] text-[#14f195]/60 text-center italic font-hdr tracking-wide mb-4">Entry Early → Target Profit 50%+</p>'
+
+        // ── Buttons ──
+        +'<div class="flex gap-3">'
+            +'<a href="'+url+'" target="_blank" class="open-btn flex-1">OPEN CHART</a>'
+            +'<a href="https://rugcheck.xyz/tokens/'+addr+'" target="_blank" class="sec-btn flex-1">RUGCHECK 🔍</a>'
         +'</div>'
+
     +'</div>';
 }
 
-// ══════════════════════════════════════════════
-// PUSH NOTIFICATION
-// ══════════════════════════════════════════════
-function pushNotif(sym, signal) {
+// ═══════════════════════════════════════════════
+//  NOTIFICATION
+// ═══════════════════════════════════════════════
+function pushNotif(sym, sig) {
     try {
-        if (Notification && Notification.permission === 'granted') {
-            new Notification(signal==='SUPREME' ? 'SUPREME GEM!' : 'Signal Baru!', {
-                body: sym + ' signal ' + signal + '. Cek Sentinel!'
-            });
-        }
+        if (Notification&&Notification.permission==='granted')
+            new Notification(sig==='SUPREME'?'🔥 SUPREME GEM!':'⚡ Signal Baru!', { body:sym+' → sinyal '+sig+'. Cek Sentinel!' });
     } catch(e) {}
 }
-try { if (Notification) Notification.requestPermission().catch(function(){}); } catch(e) {}
+try { if(Notification) Notification.requestPermission().catch(function(){}); } catch(e) {}
 
-// ══════════════════════════════════════════════
-// TIMER LOOP
-// ══════════════════════════════════════════════
+// ═══════════════════════════════════════════════
+//  TIMER
+// ═══════════════════════════════════════════════
 setInterval(function() {
     timeLeft--;
-    var pct = Math.max(0, timeLeft / CFG.REFRESH * 100);
-    document.getElementById('timerBar').style.width = pct + '%';
-    document.getElementById('clock').innerText = new Date().toLocaleTimeString();
-    if (timeLeft <= 0) {
-        fetchTokens();
-        timeLeft = CFG.REFRESH;
-    }
+    $$('timerBar').style.width = Math.max(0, timeLeft/C.REFRESH*100)+'%';
+    $$('clock').innerText = new Date().toLocaleTimeString();
+    if (timeLeft<=0) { fetchTokens(); timeLeft=C.REFRESH; }
 }, 1000);
 
 fetchTokens();
