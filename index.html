@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SENTINEL V10 GENIUS - PODIUM</title>
+    <title>SENTINEL V10 GENIUS - STABLE</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
@@ -20,7 +20,6 @@
         .bg-whale { background: #f97316; color: #fff; animation: pulse-fast 0.8s infinite; }
         .bg-safe { background: #10b981; color: #fff; }
 
-        /* RANK BADGES */
         .bg-rank-1 { background: linear-gradient(45deg, #ffd700, #bf953f); color: #000; box-shadow: 0 0 15px rgba(255, 215, 0, 0.6); }
         .bg-rank-2 { background: linear-gradient(45deg, #e2e8f0, #94a3b8); color: #000; box-shadow: 0 0 15px rgba(226, 232, 240, 0.5); }
         .bg-rank-3 { background: linear-gradient(45deg, #cd7f32, #a0522d); color: #fff; box-shadow: 0 0 15px rgba(205, 127, 50, 0.5); }
@@ -54,10 +53,16 @@
 
     <script>
         const CONFIG = {
-            REFRESH_RATE: 10, 
+            REFRESH_RATE: 12, 
             MIN_LIQUIDITY: 8000, 
             MIN_VOLUME: 15000,
-            RPC_URL: 'https://api.mainnet-beta.solana.com',
+            // RPC CLUSTER: Jika satu mati/merah, bot pindah ke server berikutnya
+            RPC_CLUSTER: [
+                'https://api.mainnet-beta.solana.com',
+                'https://solana-mainnet.g.alchemy.com/v2/demo', // Public fallback
+                'https://rpc.mainnet-beta.solana.com'
+            ],
+            CURRENT_RPC_INDEX: 0,
         };
 
         let timeLeft = CONFIG.REFRESH_RATE;
@@ -83,23 +88,44 @@
             return `${Math.floor(s/3600)}h ago`;
         }
 
+        // SMART RPC MANAGER: Menangani pergantian server jika terkena Rate Limit
         async function performAudit(p) {
-            try {
-                const response = await fetch(CONFIG.RPC_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "getTokenLargestAccounts", params: [p.baseToken.address] })
-                });
-                const data = await response.json();
-                if (!data.result) throw new Error();
-                const accounts = data.result.value;
-                let concentration = 0;
-                accounts.forEach(acc => concentration += parseInt(acc.amount));
-                const isWhaleRisk = concentration > 1000000000000; 
-                return { grade: isWhaleRisk ? 'C' : 'A', detail: isWhaleRisk ? 'High Concentration' : 'Distributed', color: isWhaleRisk ? 'text-yellow-500' : 'text-[#14f195]', isWhaleRisk };
-            } catch (e) { 
-                return { grade: '?', detail: 'Audit Pending', color: 'text-white/40', isWhaleRisk: false }; 
+            let attempts = 0;
+            while (attempts < CONFIG.RPC_CLUSTER.length) {
+                try {
+                    const rpc = CONFIG.RPC_CLUSTER[CONFIG.CURRENT_RPC_INDEX];
+                    const response = await fetch(rpc, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "getTokenLargestAccounts", params: [p.baseToken.address] })
+                    });
+
+                    if (response.status === 429) {
+                        // Rate Limit! Pindah ke server berikutnya dalam cluster
+                        CONFIG.CURRENT_RPC_INDEX = (CONFIG.CURRENT_RPC_INDEX + 1) % CONFIG.RPC_CLUSTER.length;
+                        attempts++;
+                        continue;
+                    }
+
+                    const data = await response.json();
+                    if (!data.result) throw new Error();
+                    const accounts = data.result.value;
+                    let concentration = 0;
+                    accounts.forEach(acc => concentration += parseInt(acc.amount));
+                    const isWhaleRisk = concentration > 1000000000000; 
+                    return { 
+                        grade: isWhaleRisk ? 'C' : 'A', 
+                        detail: isWhaleRisk ? 'High Concentration' : 'Distributed', 
+                        color: isWhaleRisk ? 'text-yellow-500' : 'text-[#14f195]', 
+                        isWhaleRisk,
+                        concAmount: concentration
+                    };
+                } catch (e) {
+                    CONFIG.CURRENT_RPC_INDEX = (CONFIG.CURRENT_RPC_INDEX + 1) % CONFIG.RPC_CLUSTER.length;
+                    attempts++;
+                }
             }
+            return { grade: '?', detail: 'Audit Pending', color: 'text-white/40', isWhaleRisk: false }; 
         }
 
         async function fetchTokens() {
@@ -115,8 +141,12 @@
                 const data = await pairsRes.json();
                 const pairs = (data.pairs || []).filter(p => p.liquidity?.usd > CONFIG.MIN_LIQUIDITY);
 
-                const processedPairs = await Promise.all(pairs.map(async (p) => {
+                const processedPairs = [];
+                for (const p of pairs) {
                     const audit = await performAudit(p);
+                    // Adaptive Delay: Memberi jeda 200ms antar koin agar tidak dianggap spam oleh RPC
+                    await new Promise(resolve => setTimeout(resolve, 200));
+
                     const tx = p.txns?.h24 || { buys: 0, sells: 0 };
                     const buyRatio = tx.buys / (tx.buys + tx.sells || 1);
                     const m5Change = p.priceChange?.m5 || 0;
@@ -128,8 +158,8 @@
                     const volatility = (p.volume?.h24 / p.liquidity?.usd) || 0;
                     const riskReward = (audit.grade === 'A' && signal === 'EARLY') ? 'High Reward' : (audit.isWhaleRisk ? 'High Risk' : 'Moderate');
 
-                    return { ...p, signal, audit, buyRatio, m5Change, volatility, riskReward, omniScore: (buyRatio * 50) + (m5Change * 2) };
-                }));
+                    processedPairs.push({ ...p, signal, audit, buyRatio, m5Change, volatility, riskReward, omniScore: (buyRatio * 50) + (m5Change * 2) });
+                }
 
                 const geniusList = processedPairs.filter(p => {
                     if (p.audit.grade === 'F') return false;
@@ -185,24 +215,10 @@
             const change = p.priceChange?.h24 || 0;
             const sellRatio = (1 - p.buyRatio) * 100;
             
-            // --- PODIUM STYLE LOGIC ---
-            let rankClass = "";
-            let rankBadge = "";
-            let rankGlow = "";
-
-            if (rank === 1) {
-                rankClass = "border-yellow-400"; 
-                rankGlow = "shadow-[0_0_25px_rgba(250,204,21,0.4)]";
-                rankBadge = '<span class="badge-status bg-rank-1">🏆 ELITE GEM</span>';
-            } else if (rank === 2) {
-                rankClass = "border-slate-300";
-                rankGlow = "shadow-[0_0_20px_rgba(203,213,225,0.3)]";
-                rankBadge = '<span class="badge-status bg-rank-2">🥈 PRIME GEM</span>';
-            } else if (rank === 3) {
-                rankClass = "border-orange-600";
-                rankGlow = "shadow-[0_0_15px_rgba(154,52,18,0.3)]";
-                rankBadge = '<span class="badge-status bg-rank-3">🥉 ALPHA GEM</span>';
-            }
+            let rankClass = ""; let rankBadge = ""; let rankGlow = "";
+            if (rank === 1) { rankClass = "border-yellow-400"; rankGlow = "shadow-[0_0_25px_rgba(250,204,21,0.4)]"; rankBadge = '<span class="badge-status bg-rank-1">🏆 ELITE GEM</span>'; }
+            else if (rank === 2) { rankClass = "border-slate-300"; rankGlow = "shadow-[0_0_20px_rgba(203,213,225,0.3)]"; rankBadge = '<span class="badge-status bg-rank-2">🥈 PRIME GEM</span>'; }
+            else if (rank === 3) { rankClass = "border-orange-600"; rankGlow = "shadow-[0_0_15px_rgba(154,52,18,0.3)]"; rankBadge = '<span class="badge-status bg-rank-3">🥉 ALPHA GEM</span>'; }
 
             let badges = [];
             if (rank <= 3) badges.push(rankBadge);
@@ -224,7 +240,6 @@
                         </div>
                         <button onclick="navigator.clipboard.writeText('${p.baseToken.address}')" class="bg-white text-black text-[10px] font-bold px-3 py-2 rounded-full uppercase">Copy CA</button>
                     </div>
-
                     <div class="grid grid-cols-2 gap-3 mb-4 text-[10px]">
                         <div class="glass-panel rounded-2xl p-3 border border-white/5">
                             <p class="text-[8px] text-white/40 font-header mb-2 tracking-widest uppercase">Security Audit</p>
@@ -239,7 +254,6 @@
                             <div class="text-sm font-bold ${p.audit.isWhaleRisk ? 'text-yellow-500' : 'text-[#14f195]'}">${p.riskReward}</div>
                         </div>
                     </div>
-
                     <div class="grid grid-cols-2 gap-3 mb-4 text-[10px]">
                         <div class="glass-panel rounded-2xl p-3 border border-white/5">
                             <p class="text-[8px] text-white/40 font-header mb-1 tracking-widest uppercase">Volatility</p>
@@ -253,7 +267,6 @@
                             <div class="text-lg font-bold ${change >= 0 ? 'text-[#14f195]' : 'text-[#ff4b4b]'}">${change >= 0 ? '+' : ''}${change}%</div>
                         </div>
                     </div>
-
                     <div class="glass-panel rounded-2xl p-3 border border-white/5 mb-6">
                         <div class="flex justify-between text-[10px] mb-2">
                             <span class="text-white/40 uppercase font-header text-[8px]">Order Flow Analysis</span>
@@ -266,19 +279,13 @@
                             <div class="h-full bg-[#14f195] rounded-full shadow-[0_0_8px_#14f195] transition-all duration-500" style="width: ${p.buyRatio*100}%"></div>
                             <div class="h-full bg-[#ff4b4b] rounded-full transition-all duration-500" style="width: ${sellRatio}%"></div>
                         </div>
-                        ${p.signal === 'SUPREME' ? `
-                            <div class="mt-3 pt-2 border-t border-white/10 text-center">
-                                <p class="text-[8px] text-[#14f195] font-bold uppercase tracking-tighter italic">Hold Strategy: Sell when Buy Pressure &lt; 60%</p>
-                            </div>
-                        ` : ''}
+                        ${p.signal === 'SUPREME' ? `<div class="mt-3 pt-2 border-t border-white/10 text-center"><p class="text-[8px] text-[#14f195] font-bold uppercase tracking-tighter italic">Hold Strategy: Sell when Buy Pressure &lt; 60%</p></div>` : ''}
                     </div>
-
                     <div class="grid grid-cols-3 gap-2 text-center mb-6">
                         <div class="bg-white/5 p-2 rounded-xl"><span class="text-[8px] text-white/30 font-header">Liq</span><div class="text-[#14f195] font-bold text-[12px]">$${(liq/1000).toFixed(0)}K</div></div>
                         <div class="bg-white/5 p-2 rounded-xl"><span class="text-[8px] text-white/30 font-header">Mcap</span><div class="font-bold text-[12px]">$${(mcap/1000).toFixed(0)}K</div></div>
                         <div class="bg-white/5 p-2 rounded-xl"><span class="text-[8px] text-white/30 font-header">Vol 24h</span><div class="text-white/70 font-bold text-[12px]">$${(p.volume?.h24/1000 || 0).toFixed(0)}K</div></div>
                     </div>
-
                     <div class="flex gap-3 w-full">
                         <a href="${p.url}" target="_blank" class="flex-1 bg-[#14f195] text-black text-[11px] font-bold py-4 rounded-2xl text-center uppercase tracking-widest hover:opacity-80 transition-opacity">Open Chart</a>
                         <a href="https://rugcheck.xyz/tokens/${p.baseToken.address}" target="_blank" class="flex-1 bg-white/10 border border-white/10 text-white text-[11px] font-bold py-4 rounded-2xl text-center uppercase tracking-widest">RugCheck 🔍</a>
