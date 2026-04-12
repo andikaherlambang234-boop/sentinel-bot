@@ -119,21 +119,16 @@
                     return { ...p, signal, audit, buyRatio, m5Change, volatility, riskReward, omniScore: (buyRatio * 50) + (m5Change * 2) };
                 }));
 
-                // --- GENIUS ADMISSION CONTROLLER (FILTER KETAT) ---
                 const geniusList = processedPairs.filter(p => {
-                    // 1. Koin Grade F atau Whale ekstrem dilarang masuk list
                     if (p.audit.grade === 'F') return false;
-                    
-                    // 2. Syarat untuk masuk list: Harus punya salah satu tanda "Potensi Pump"
                     const isHighPotential = (
                         p.signal === 'EARLY' || 
                         p.signal === 'SUPREME' || 
                         (p.buyRatio > 0.6 && p.m5Change > 2) ||
                         (p.omniScore > 40 && p.buyRatio > 0.6)
                     );
-                    
                     return isHighPotential;
-                }).sort((a, b) => b.omniScore - a.omniScore); // Urutkan dari yang paling berpotensi
+                }).sort((a, b) => b.omniScore - a.omniScore);
 
                 render(geniusList);
                 statusText.innerText = "ACTIVE";
@@ -220,7 +215,7 @@
                         </div>
                     </div>
 
-                    <div class="glass-panel rounded-2xl p-3 border border-white/5 mb-4">
+                    <div class="glass-panel rounded-2xl p-3 border border-white/5 mb-6">
                         <div class="flex justify-between text-[10px] mb-2">
                             <span class="text-white/40 uppercase font-header text-[8px]">Order Flow Analysis</span>
                             <div class="flex gap-3">
@@ -237,12 +232,13 @@
                     <div class="grid grid-cols-3 gap-2 text-center mb-6">
                         <div class="bg-white/5 p-2 rounded-xl"><span class="text-[8px] text-white/30 font-header">Liq</span><div class="text-[#14f195] font-bold text-[12px]">$${(liq/1000).toFixed(0)}K</div></div>
                         <div class="bg-white/5 p-2 rounded-xl"><span class="text-[8px] text-white/30 font-header">Mcap</span><div class="font-bold text-[12px]">$${(mcap/1000).toFixed(0)}K</div></div>
-                        <div class="bg-white/5 p-2 rounded-xl"><span class="text-[8px] text-white/30 font-header">Vol 24h</span><div class="text-white/70 font-bold text=$\text{${(p.volume?.h24/1000 || 0).toFixed(0)}K</div></div>
+                        <div class="bg-white/5 p-2 rounded-xl"><span class="text-[8px] text-white/30 font-header">Vol 24h</span><div class="text-white/70 font-bold text-[12px]">$${(p.volume?.h24/1000 || 0).toFixed(0)}K</div></div>
                     </div>
 
-                    <div class="grid grid-cols-2 gap-3">
-                        <a href="${p.url}" target="_blank" class="bg-[#14f195] text-black text-[11px] font-bold py-4 rounded-2xl text-center uppercase tracking-widest hover:opacity-80 transition-opacity">Open Chart</a>
-                        <a href="https://rugcheck.xyz/tokens/${p.baseToken.address}" target="_blank" class="bg-white/10 border border-white/10 text-white text-[11px] font-bold py-4 rounded-2xl text-center uppercase tracking-widest">RugCheck 🔍</a>
+                    <!-- PERBAIKAN DISINI: Menggunakan Flexbox dengan w-full agar tombol tidak tumpang tindih -->
+                    <div class="flex gap-3 w-full">
+                        <a href="${p.url}" target="_blank" class="flex-1 bg-[#14f195] text-black text-[11px] font-bold py-4 rounded-2xl text-center uppercase tracking-widest hover:opacity-80 transition-opacity">Open Chart</a>
+                        <a href="https://rugcheck.xyz/tokens/${p.baseToken.address}" target="_blank" class="flex-1 bg-white/10 border border-white/10 text-white text-[11px] font-bold py-4 rounded-2xl text-center uppercase tracking-widest">RugCheck 🔍</a>
                     </div>
                 </div>
             `;
