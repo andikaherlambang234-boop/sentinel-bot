@@ -564,18 +564,18 @@ input.si:focus,textarea.si:focus{border-color:rgba(20,241,149,.45);}
 // ════════════════════════════════════════════════════════════
 const CFG = {
   REFRESH:30, REFRESH_FAST:15, REFRESH_SNIPE:5,
-  MIN_LIQ:8000, MIN_MCAP:30000, MIN_VOL:20000,
-  MAX_H24_DOWN:-20, MIN_BUY_RATIO:0.52,
-  TIMEOUT_MS:13000, MAX_RETRY:3, RETRY_MS:5000,
+  MIN_LIQ:2000, MIN_MCAP:5000, MIN_VOL:3000,
+  MAX_H24_DOWN:-35, MIN_BUY_RATIO:0.50,
+  TIMEOUT_MS:18000, MAX_RETRY:4, RETRY_MS:6000,
   PROFILES_LIMIT:50, RUG_LIMIT:12, AI_LIMIT:15,
-  SPIKE_MULT:3, CASCADE_THRESHOLD:3,
+  SPIKE_MULT:2.5, CASCADE_THRESHOLD:3,
   WIN_CHECK_MS:90000, WIN_TARGET_PCT:10,
   SNIPE_MAX_AGE_MS:2*60*60*1000,
-  SELL_BUY_THRESH:0.40, SELL_M5_THRESH:-4,
-  NEW_PAIR_MAX_AGE_MS:4*60*60*1000,
-  NEW_PAIR_MIN_BUY:0.58, NEW_PAIR_MIN_TXN:20,
-  NEW_PAIR_MIN_H1VOL:300, NEW_PAIR_SPIKE_MIN:1.2,
-  SNIPE_QUALITY_BUY:0.55,
+  SELL_BUY_THRESH:0.38, SELL_M5_THRESH:-5,
+  NEW_PAIR_MAX_AGE_MS:6*60*60*1000,
+  NEW_PAIR_MIN_BUY:0.55, NEW_PAIR_MIN_TXN:10,
+  NEW_PAIR_MIN_H1VOL:100, NEW_PAIR_SPIKE_MIN:1.0,
+  SNIPE_QUALITY_BUY:0.52,
   TOP3_AI_MIN_INTERVAL_MS:90000,
 };
 
@@ -1395,7 +1395,7 @@ function updateAdaptiveRefresh(genius){
 function fetchTokens(){
   if(isFetching)return;isFetching=true;hudOn('MULTI-SCAN...',20);setSt('SCANNING...','bg-yellow-400 animate-pulse');clearErr();
   const s1=sfetch('https://api.dexscreener.com/token-profiles/latest/v1')
-    .then(r=>{hudProgress(40);if(!r.ok)throw Object.assign(new Error('HTTP '+r.status),{_http:r.status,_stage:'PROFILES'});return getJson(r,'PROFILES');})
+    .then(r=>{hudProgress(35);if(!r.ok)throw Object.assign(new Error('HTTP '+r.status),{_http:r.status,_stage:'PROFILES'});return getJson(r,'PROFILES');})
     .then(profiles=>{
       if(!Array.isArray(profiles))return[];
       const addrs=profiles.filter(p=>p.chainId==='solana').slice(0,CFG.PROFILES_LIMIT).map(p=>p.tokenAddress).filter(Boolean);
@@ -1411,10 +1411,18 @@ function fetchTokens(){
       return sfetch('https://api.dexscreener.com/latest/dex/tokens/'+bA.join(','))
         .then(r2=>{if(!r2.ok)return[];return getJson(r2,'BOOSTS2').then(dd=>(dd.pairs||[]).filter(p=>p.chainId==='solana'));});
     })}).catch(()=>[]);
+  /* ── S3: SEARCH FALLBACK — always fetch trending Solana pairs via search ── */
+  const TRENDING_QUERIES=['solana','sol meme','sol pump','solana new'];
+  const s3=Promise.all(TRENDING_QUERIES.slice(0,2).map(q=>
+    sfetch('https://api.dexscreener.com/latest/dex/search?q='+encodeURIComponent(q))
+      .then(r=>r.ok?getJson(r,'SEARCH_'+q):{pairs:[]})
+      .then(d=>(d.pairs||[]).filter(p=>p.chainId==='solana'))
+      .catch(()=>[])
+  )).then(results=>results.flat()).catch(()=>[]);
 
-  Promise.all([s1,s2]).then(([p1,p2])=>{
+  Promise.all([s1,s2,s3]).then(([p1,p2,p3])=>{
     hudProgress(75);const seen=new Set();
-    const all=[...p1,...p2].filter(p=>{if(!p.pairAddress||seen.has(p.pairAddress))return false;seen.add(p.pairAddress);return true;});
+    const all=[...p1,...p2,...p3].filter(p=>{if(!p?.pairAddress||seen.has(p.pairAddress))return false;seen.add(p.pairAddress);return true;});
     const valid=all.filter(isValidToken);allValidTokens=valid;
     const stS=$('st-scanned'),stP=$('st-passed');if(stS)stS.textContent=all.length;if(stP)stP.textContent=valid.length;
     const ss=$('scan-stats');if(ss){ss.classList.remove('hidden');ss.classList.add('show');}
@@ -1455,10 +1463,10 @@ function fetchTokens(){
       tokenRegistry[addr]=obj;return obj;
     });
     let genius=processed.filter(x=>{
-      const ah=(Date.now()-normTs(x.p.pairCreatedAt||0))/3600000,isN=ah>0&&ah<4;
+      const ah=(Date.now()-normTs(x.p.pairCreatedAt||0))/3600000,isN=ah>0&&ah<6;
       if(isN&&x.buyRatio>=CFG.NEW_PAIR_MIN_BUY&&(x.p.volume?.h1||0)>=CFG.NEW_PAIR_MIN_H1VOL&&x.spikeRatio>=CFG.NEW_PAIR_SPIKE_MIN)return true;
       if(x.audit.grade==='F')return false;if(x.audit.grade==='D'&&x.signal==='NONE'&&!x.sellSignal)return false;
-      return(x.signal==='SUPREME'||x.signal==='EARLY'||x.spikeRatio>=CFG.SPIKE_MULT||x.isSnipe||(x.buyRatio>CFG.MIN_BUY_RATIO&&x.m5>2)||(x.omni>28&&x.buyRatio>0.53)||!!x.sellSignal||boostAddrs.has(x.p?.baseToken?.address));
+      return(x.signal==='SUPREME'||x.signal==='EARLY'||x.spikeRatio>=CFG.SPIKE_MULT||x.isSnipe||(x.buyRatio>CFG.MIN_BUY_RATIO&&x.m5>1)||(x.omni>18&&x.buyRatio>0.50)||!!x.sellSignal||boostAddrs.has(x.p?.baseToken?.address));
     }).sort((a,b)=>b.omni-a.omni);
     genius=dedupTokens(genius);
     const stG=$('st-gems'),stM=$('st-mom');if(stG)stG.textContent=genius.length;if(stM)stM.textContent=genius.filter(x=>x.mom>40).length;
@@ -1478,7 +1486,8 @@ function fetchTokens(){
     const v48=Date.now()-48*3600000;Object.keys(vault).forEach(k=>{if(vault[k].t&&vault[k].t<v48)delete vault[k];});lsSet('sv17_vault',vault);
     checkPriceAlerts(genius);updateAdaptiveRefresh(genius);runCorrelation(genius,valid);calcMarketRegime(genius);
     lastGenius=genius;renderFiltered(genius);if(currentView==='heat')renderHeatmap(genius);
-    setSt('ACTIVE '+genius.length+' GEMS | '+marketRegime,'bg-[#14f195] animate-pulse');
+    const statusTxt=genius.length>0?'ACTIVE '+genius.length+' GEMS | '+marketRegime:'NO GEMS — '+all.length+' SCANNED | '+marketRegime;
+    setSt(statusTxt,genius.length>0?'bg-[#14f195] animate-pulse':'bg-yellow-500');
     hudProgress(100);setTimeout(hudOff,300);retryCount=0;isFetching=false;
     genius.slice(0,CFG.RUG_LIMIT).forEach(x=>{const addr=x.p.baseToken?.address;if(addr)checkRug(addr).then(rug=>updateRug(addr,rug));});
     if(getHeliusKey()){genius.slice(0,8).forEach(x=>{const mint=x.p.baseToken?.address;if(mint)checkHolderConcentration(mint).then(pct=>updateConcentration(mint,pct));});}
@@ -1490,7 +1499,7 @@ function fetchTokens(){
     }
   }).catch(err=>{
     isFetching=false;const info=classify(err,err?._stage||'FETCH');
-    showErr(info);retryCount++;setSt('ERROR ('+retryCount+'x)','bg-red-500');hudOn('RECONNECTING...');
+    showErr(info);retryCount++;setSt('ERROR ('+retryCount+'x) — '+info.c,'bg-red-500');hudOn('RECONNECTING...');
     if(retryCount<=CFG.MAX_RETRY){hudRetry(retryCount);setTimeout(fetchTokens,CFG.RETRY_MS);}else hudOff();
   });
 }
